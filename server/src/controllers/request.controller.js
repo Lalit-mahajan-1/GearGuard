@@ -127,7 +127,7 @@ export const updateRequest = async (req, res) => {
 
     // Role-based restrictions
     if (req.user?.role === 'Technician') {
-        const allowedFields = ['status', 'duration', 'assignedTechnician'];
+        const allowedFields = ['status', 'duration', 'assignedTechnician', 'scheduledDate'];
         const keys = Object.keys(req.body);
         // Technicians: self-assign only within same team
         if (req.body.assignedTechnician) {
@@ -170,17 +170,7 @@ export const updateRequest = async (req, res) => {
     // Normalize 'Scrap' to 'Scrapped'
     if (req.body.status === 'Scrap') req.body.status = 'Scrapped';
 
-<<<<<<< HEAD
-    // Once scrapped, request becomes read-only for status changes
-    if (request.status === 'Scrapped') {
-        console.log(`[updateRequest] Request already scrapped, rejecting update`);
-        return res.status(400).json({ message: 'Request is scrapped and read-only' });
-    }
-
-    // Manager-only: handle scrap; perform equipment + request updates safely
-=======
     // Manager-only: handle scrap state changes
->>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
     if (req.body.status === 'Scrapped' && request.status !== 'Scrapped') {
         console.log(`[updateRequest] Scrap attempt - User role: ${req.user?.role}`);
         if (req.user?.role !== 'Manager' && req.user?.role !== 'Admin') {
@@ -189,20 +179,8 @@ export const updateRequest = async (req, res) => {
         }
         
         try {
-<<<<<<< HEAD
-            console.log(`[Scrap] Starting transaction for request ${request._id}`);
-            session.startTransaction();
-            
-            console.log(`[Scrap] Fetching equipment with ID: ${request.equipment}`);
-            const equipment = await Equipment.findById(request.equipment).session(session);
-            if (!equipment) {
-                await session.abortTransaction();
-                session.endSession();
-                console.log(`[Scrap] ✗ Equipment not found for ID: ${request.equipment}`);
-=======
             const equipment = await Equipment.findById(request.equipment);
             if (!equipment) {
->>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
                 return res.status(404).json({ message: 'Linked equipment not found' });
             }
             
@@ -215,49 +193,15 @@ export const updateRequest = async (req, res) => {
             equipment.scrappedAt = new Date();
             equipment.scrapReason = scrapReason;
             equipment.scrappedBy = req.user._id;
-<<<<<<< HEAD
-            
             await equipment.save();
-            console.log(`[Scrap] ✓ Equipment ${equipment._id} saved successfully`);
-=======
-            await equipment.save();
->>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
 
             console.log(`[Scrap] Updating request status to Scrapped...`);
             request.status = 'Scrapped';
             await request.save();
-<<<<<<< HEAD
-            console.log(`[Scrap] ✓ Request ${request._id} saved successfully`);
-
-            console.log(`[Scrap] ✓✓ Scrap operation completed successfully`);
-            return res.json(request);
-        } catch (err) {
-            console.log(`[Scrap] ✗✗ Scrap operation error:`, {
-                message: err?.message,
-                code: err?.code,
-                name: err?.name,
-                validationErrors: err?.errors ? Object.keys(err.errors) : null
-            });
-            console.error(err);
-            // Send back full error details for debugging
-            return res.status(500).json({ 
-                message: 'Failed to scrap equipment', 
-                error: err?.message,
-                validationErrors: err?.errors ? Object.entries(err.errors).map(([key, val]) => ({
-                    field: key,
-                    message: val?.message
-                })) : null,
-                details: {
-                    code: err?.code,
-                    name: err?.name
-                }
-            });
-=======
 
             return res.json(request);
         } catch (err) {
             return res.status(500).json({ message: 'Failed to scrap equipment', error: err?.message });
->>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
         }
     }
 

@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
+import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Calendar } from 'lucide-react';
+import { Calendar, ChevronDown } from 'lucide-react';
 
-const WeeklyScheduleTable = ({ requests = [], selectedDate }) => {
+const WeeklyScheduleTable = ({ requests = [], selectedDate, onRequestUpdated }) => {
+    const [editingId, setEditingId] = useState(null);
+    const [updatingId, setUpdatingId] = useState(null);
     // Get the start of the week (Sunday)
     const getWeekStart = (date) => {
         const d = new Date(date);
@@ -37,7 +40,15 @@ const WeeklyScheduleTable = ({ requests = [], selectedDate }) => {
                 reqDate.getUTCDate()
             ));
             
-            return reqDay.getTime() === day.getTime();
+            // Check if request is on this day
+            if (reqDay.getTime() !== day.getTime()) return false;
+            
+            // Check if hour falls within task duration
+            const startHour = reqDate.getUTCHours();
+            const duration = req.duration || 1; // Default to 1 hour if no duration
+            const endHour = startHour + Math.ceil(duration);
+            
+            return hour >= startHour && hour < endHour;
         });
     };
 
@@ -71,6 +82,42 @@ const WeeklyScheduleTable = ({ requests = [], selectedDate }) => {
         const ampm = hour >= 12 ? 'PM' : 'AM';
         const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
         return `${displayHour}:00 ${ampm}`;
+    };
+
+    const handleTimeChange = async (requestId, newHour) => {
+        const request = requests.find(r => r._id === requestId);
+        if (!request) return;
+
+        // Create new date with same day but different hour
+        const reqDate = new Date(request.scheduledDate);
+        const newScheduledDate = new Date(Date.UTC(
+            reqDate.getUTCFullYear(),
+            reqDate.getUTCMonth(),
+            reqDate.getUTCDate(),
+            newHour,
+            0,
+            0,
+            0
+        )).toISOString();
+
+        setUpdatingId(requestId);
+        setEditingId(null);
+
+        try {
+            const { data } = await axios.put(
+                `http://localhost:5000/api/requests/${requestId}`,
+                { scheduledDate: newScheduledDate }
+            );
+            console.log('Request time updated:', data);
+            if (onRequestUpdated) {
+                onRequestUpdated();
+            }
+        } catch (error) {
+            console.error('Failed to update request time:', error);
+            alert('Failed to update request time. Please try again.');
+        } finally {
+            setUpdatingId(null);
+        }
     };
 
     const allRequestsForWeek = requests.filter(req => {
@@ -156,20 +203,61 @@ const WeeklyScheduleTable = ({ requests = [], selectedDate }) => {
                                                 >
                                                     {dayRequests.length > 0 ? (
                                                         <div className="space-y-1">
-                                                            {dayRequests.map((req) => (
-                                                                <div
-                                                                    key={req._id}
-                                                                    className="p-1 rounded text-xs truncate"
-                                                                    title={req.subject}
-                                                                    style={{
-                                                                        backgroundColor: getPriorityColor(req.priority).bg,
-                                                                        color: getPriorityColor(req.priority).text,
-                                                                        cursor: 'pointer'
-                                                                    }}
-                                                                >
-                                                                    {req.subject}
-                                                                </div>
-                                                            ))}
+                                                            {dayRequests.map((req) => {
+                                                                const isEditing = editingId === req._id;
+                                                                const isUpdating = updatingId === req._id;
+                                                                const reqDate = new Date(req.scheduledDate);
+                                                                const reqHour = reqDate.getUTCHours();
+                                                                const duration = req.duration || 1;
+                                                                
+                                                                // Only show task in its starting hour, not in continuation hours
+                                                                if (hour !== reqHour) return null;
+
+                                                                return (
+                                                                    <div key={req._id} className="relative">
+                                                                        <div
+                                                                            className="p-1 rounded text-xs flex items-center justify-between gap-1 cursor-pointer hover:opacity-80"
+                                                                            title={`${req.subject} (${duration}h)`}
+                                                                            style={{
+                                                                                backgroundColor: getPriorityColor(req.priority).bg,
+                                                                                color: getPriorityColor(req.priority).text,
+                                                                                opacity: isUpdating ? 0.6 : 1,
+                                                                                gridColumn: duration > 1 ? `span ${Math.min(Math.ceil(duration), 7)}` : 'auto'
+                                                                            }}
+                                                                            onClick={() => setEditingId(isEditing ? null : req._id)}
+                                                                        >
+                                                                            <span className="truncate flex-1">{req.subject}</span>
+                                                                            <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                                                                        </div>
+
+                                                                        {isEditing && (
+                                                                            <div
+                                                                                className="absolute top-full left-0 right-0 mt-1 rounded border bg-white z-50 max-h-48 overflow-y-auto"
+                                                                                style={{
+                                                                                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                                                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                                                                }}
+                                                                            >
+                                                                                {Array.from({ length: 24 }, (_, i) => i).map(hr => (
+                                                                                    <button
+                                                                                        key={hr}
+                                                                                        onClick={() => handleTimeChange(req._id, hr)}
+                                                                                        disabled={isUpdating}
+                                                                                        className="w-full px-2 py-1 text-xs text-left hover:bg-blue-50 disabled:opacity-50"
+                                                                                        style={{
+                                                                                            backgroundColor: hr === reqHour ? 'rgb(230, 243, 255)' : 'transparent',
+                                                                                            color: hr === reqHour ? 'rgb(42, 112, 255)' : 'rgb(30, 33, 40)',
+                                                                                            fontWeight: hr === reqHour ? '600' : '400'
+                                                                                        }}
+                                                                                    >
+                                                                                        {formatHour(hr)}
+                                                                                    </button>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     ) : (
                                                         <span style={{ color: 'rgb(245, 246, 249)' }}>-</span>

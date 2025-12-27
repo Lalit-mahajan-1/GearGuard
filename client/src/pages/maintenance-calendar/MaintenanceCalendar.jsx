@@ -357,7 +357,7 @@ const MaintenanceCalendar = () => {
             </div>
 
             {/* Weekly Schedule Table */}
-            <WeeklyScheduleTable requests={requests} selectedDate={selectedDate} />
+            <WeeklyScheduleTable requests={requests} selectedDate={selectedDate} onRequestUpdated={handleRefresh} />
         </div>
     );
 };
