@@ -6,6 +6,7 @@ import { Button } from '../ui/button';
 import { format } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
+import ProfileHoverCard from '../ui/ProfileHoverCard';
 
 const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
     const { user, logout } = useAuth();
@@ -74,21 +75,9 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen }) => {
                     )}
                 </div>
 
-                {/* User Profile (Minimal) */}
-                <div className="flex items-center gap-3 pl-4 border-l">
-                    <div className="hidden md:block text-right">
-                        <p className="text-sm font-medium text-slate-700 leading-tight">{user?.name}</p>
-                        <p className="text-[10px] text-slate-500 uppercase font-semibold">{user?.role}</p>
-                    </div>
-                    <div className="h-8 w-8 rounded-full bg-slate-100 border border-slate-200 overflow-hidden">
-                        {user?.avatar ? (
-                            <img src={user.avatar} className="h-full w-full object-cover" />
-                        ) : (
-                            <div className="h-full w-full flex items-center justify-center text-slate-400">
-                                <UserIcon className="h-4 w-4" />
-                            </div>
-                        )}
-                    </div>
+                {/* User Profile Hover Card */}
+                <div className="pl-4 border-l">
+                    <ProfileHoverCard showName className="items-center" />
                 </div>
             </div>
         </header>
