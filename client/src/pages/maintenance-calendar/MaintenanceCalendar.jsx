@@ -25,12 +25,14 @@ const MaintenanceCalendar = () => {
         const fetchScheduledRequests = async () => {
             try {
                 setLoading(true);
+                console.log('Fetching scheduled requests for user:', { role: user.role, userId: user._id });
                 const { data } = await axios.get('http://localhost:5000/api/requests/calendar/scheduled', {
                     params: {
                         role: user.role,
                         userId: user._id
                     }
                 });
+                console.log('Fetched requests:', data);
                 setRequests(data);
                 setFilteredRequests(data);
                 setError(null);
@@ -59,9 +61,16 @@ const MaintenanceCalendar = () => {
 
         // Filter by selected date (UTC comparison)
         const selectedDateUTC = getUTCDateString(selectedDate);
+        console.log('Selected date UTC:', selectedDateUTC);
+        console.log('All requests:', requests);
+        
         filtered = filtered.filter(req => {
-            return getUTCDateString(req.scheduledDate) === selectedDateUTC;
+            const reqDateUTC = getUTCDateString(req.scheduledDate);
+            console.log('Comparing:', reqDateUTC, '===', selectedDateUTC, '→', reqDateUTC === selectedDateUTC);
+            return reqDateUTC === selectedDateUTC;
         });
+        
+        console.log('Filtered after date:', filtered);
 
         // Filter by priority
         if (filters.priority !== 'All') {

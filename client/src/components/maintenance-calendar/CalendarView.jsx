@@ -14,24 +14,25 @@ const CalendarView = ({ selectedDate, onDateSelect, scheduledDates = [] }) => {
     };
 
     const hasScheduledDate = (day) => {
-        return scheduledDates.some(d => 
-            d.getDate() === day &&
-            d.getMonth() === currentMonth.getMonth() &&
-            d.getFullYear() === currentMonth.getFullYear()
-        );
+        return scheduledDates.some(d => {
+            const dateObj = new Date(d);
+            return dateObj.getUTCDate() === day &&
+                   dateObj.getUTCMonth() === currentMonth.getUTCMonth() &&
+                   dateObj.getUTCFullYear() === currentMonth.getUTCFullYear();
+        });
     };
 
     const isSelected = (day) => {
-        return selectedDate.getDate() === day &&
-               selectedDate.getMonth() === currentMonth.getMonth() &&
-               selectedDate.getFullYear() === currentMonth.getFullYear();
+        return selectedDate.getUTCDate() === day &&
+               selectedDate.getUTCMonth() === currentMonth.getUTCMonth() &&
+               selectedDate.getUTCFullYear() === currentMonth.getUTCFullYear();
     };
 
     const isToday = (day) => {
         const today = new Date();
-        return day === today.getDate() &&
-               currentMonth.getMonth() === today.getMonth() &&
-               currentMonth.getFullYear() === today.getFullYear();
+        return day === today.getUTCDate() &&
+               currentMonth.getUTCMonth() === today.getUTCMonth() &&
+               currentMonth.getUTCFullYear() === today.getUTCFullYear();
     };
 
     const handlePrevMonth = () => {
@@ -43,7 +44,7 @@ const CalendarView = ({ selectedDate, onDateSelect, scheduledDates = [] }) => {
     };
 
     const handleSelectDate = (day) => {
-        const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        const newDate = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), day));
         onDateSelect(newDate);
     };
 
