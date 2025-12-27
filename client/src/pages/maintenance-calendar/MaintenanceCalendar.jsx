@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Calendar, Filter, Download, X } from 'lucide-react';
+import { Calendar, Filter, Download, X, RefreshCw } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import CalendarView from '../../components/maintenance-calendar/CalendarView';
 import ScheduledRequestsTable from '../../components/maintenance-calendar/ScheduledRequestsTable';
+import WeeklyScheduleTable from '../../components/maintenance-calendar/WeeklyScheduleTable';
 
 const MaintenanceCalendar = () => {
     const { user } = useAuth();
@@ -19,6 +20,7 @@ const MaintenanceCalendar = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Fetch scheduled maintenance requests
     useEffect(() => {
@@ -105,6 +107,24 @@ const MaintenanceCalendar = () => {
         });
     };
 
+    const handleRefresh = async () => {
+        setRefreshing(true);
+        try {
+            const { data } = await axios.get('http://localhost:5000/api/requests/calendar/scheduled', {
+                params: {
+                    role: user.role,
+                    userId: user._id
+                }
+            });
+            setRequests(data);
+            console.log('Calendar refreshed with latest data:', data);
+        } catch (err) {
+            console.error('Failed to refresh data:', err);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const handleExportCSV = () => {
         if (filteredRequests.length === 0) {
             alert('No data to export');
@@ -148,17 +168,32 @@ const MaintenanceCalendar = () => {
                         </p>
                     </div>
                 </div>
-                <Button
-                    onClick={handleExportCSV}
-                    className="flex items-center gap-2"
-                    style={{
-                        backgroundColor: 'rgb(42, 112, 255)',
-                        color: 'white'
-                    }}
-                >
-                    <Download className="h-4 w-4" />
-                    Export
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        onClick={handleRefresh}
+                        className="flex items-center gap-2"
+                        disabled={refreshing}
+                        style={{
+                            backgroundColor: 'rgb(245, 246, 249)',
+                            color: 'rgb(42, 112, 255)',
+                            border: '1px solid rgba(0, 0, 0, 0.08)'
+                        }}
+                    >
+                        <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                    <Button
+                        onClick={handleExportCSV}
+                        className="flex items-center gap-2"
+                        style={{
+                            backgroundColor: 'rgb(42, 112, 255)',
+                            color: 'white'
+                        }}
+                    >
+                        <Download className="h-4 w-4" />
+                        Export
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -320,6 +355,9 @@ const MaintenanceCalendar = () => {
                     </Card>
                 </div>
             </div>
+
+            {/* Weekly Schedule Table */}
+            <WeeklyScheduleTable requests={requests} selectedDate={selectedDate} />
         </div>
     );
 };

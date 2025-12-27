@@ -23,9 +23,22 @@ const CalendarView = ({ selectedDate, onDateSelect, scheduledDates = [] }) => {
     };
 
     const isSelected = (day) => {
-        return selectedDate.getUTCDate() === day &&
-               selectedDate.getUTCMonth() === currentMonth.getUTCMonth() &&
-               selectedDate.getUTCFullYear() === currentMonth.getUTCFullYear();
+        // Check if this day is in the current month being viewed
+        if (day === null) return false;
+        
+        const dayInCurrentMonth = new Date(Date.UTC(
+            currentMonth.getUTCFullYear(),
+            currentMonth.getUTCMonth(),
+            day
+        ));
+        
+        const selectedDateOnly = new Date(Date.UTC(
+            selectedDate.getUTCFullYear(),
+            selectedDate.getUTCMonth(),
+            selectedDate.getUTCDate()
+        ));
+        
+        return dayInCurrentMonth.getTime() === selectedDateOnly.getTime();
     };
 
     const isToday = (day) => {
