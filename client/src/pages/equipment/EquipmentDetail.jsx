@@ -55,6 +55,11 @@ const EquipmentDetail = () => {
 
     return (
         <div className="space-y-6 pb-8">
+            {equipment.status === 'Scrapped' && (
+                <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    This equipment has been scrapped and is no longer usable.
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
@@ -105,6 +110,12 @@ const EquipmentDetail = () => {
                             }}>
                                 {equipment.status}
                             </Badge>
+                            {equipment.status === 'Scrapped' && (
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    Scrapped at {equipment.scrappedAt ? format(new Date(equipment.scrappedAt), 'MMM dd, yyyy HH:mm') : 'Unknown'}
+                                    {equipment.scrapReason ? ` — ${equipment.scrapReason}` : ''}
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

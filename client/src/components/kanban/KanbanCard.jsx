@@ -53,6 +53,9 @@ const KanbanCard = ({
           <div className="flex items-center gap-2">
             <Badge>{request.priority}</Badge>
             <Badge variant="outline">{request.status}</Badge>
+            {request.status === 'Scrapped' && (
+              <Badge className="bg-red-100 text-red-700 border-none" title="This equipment has been scrapped and is no longer usable.">Scrapped</Badge>
+            )}
           </div>
         </div>
 

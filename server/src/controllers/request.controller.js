@@ -92,6 +92,11 @@ export const createRequest = async (req, res) => {
         throw new Error('Equipment not found');
     }
 
+    // Prevent creating requests for scrapped equipment
+    if (equipmentDoc.status === 'Scrapped' || equipmentDoc.isScrapped) {
+        return res.status(400).json({ message: 'Cannot create request: equipment has been scrapped' });
+    }
+
     const request = await MaintenanceRequest.create({
         subject,
         description,
@@ -160,12 +165,46 @@ export const updateRequest = async (req, res) => {
         return res.json(updated);
     }
 
-    // Manager/Admin logic: Equipment auto updates on status changes
+    // Normalize 'Scrap' to 'Scrapped'
+    if (req.body.status === 'Scrap') req.body.status = 'Scrapped';
+
+    // Once scrapped, request becomes read-only for status changes
+    if (request.status === 'Scrapped') {
+        return res.status(400).json({ message: 'Request is scrapped and read-only' });
+    }
+
+    // Manager-only: handle scrap; perform equipment + request updates safely
     if (req.body.status === 'Scrapped' && request.status !== 'Scrapped') {
-        const equipment = await Equipment.findById(request.equipment);
-        if (equipment) {
+        if (req.user?.role !== 'Manager') {
+            return res.status(403).json({ message: 'Only Managers can mark a request as Scrapped' });
+        }
+        const session = await mongoose.startSession();
+        try {
+            session.startTransaction();
+            const equipment = await Equipment.findById(request.equipment).session(session);
+            if (!equipment) {
+                await session.abortTransaction();
+                session.endSession();
+                return res.status(404).json({ message: 'Linked equipment not found' });
+            }
+            const scrapReason = req.body.scrapReason || (request.notes?.length ? request.notes[request.notes.length - 1].text : '') || `Scrapped via request ${request._id}`;
             equipment.status = 'Scrapped';
-            await equipment.save();
+            equipment.isScrapped = true;
+            equipment.scrappedAt = new Date();
+            equipment.scrapReason = scrapReason;
+            equipment.scrappedBy = req.user._id;
+            await equipment.save({ session });
+
+            request.status = 'Scrapped';
+            await request.save({ session });
+
+            await session.commitTransaction();
+            session.endSession();
+            return res.json(request);
+        } catch (err) {
+            try { await session.abortTransaction(); } catch {}
+            session.endSession();
+            return res.status(500).json({ message: 'Failed to scrap equipment', error: err?.message });
         }
     }
     if (req.body.status === 'Repaired' && request.status !== 'Repaired') {
