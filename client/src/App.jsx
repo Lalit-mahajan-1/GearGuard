@@ -1,0 +1,44 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/layout/ProtectedRoute';
+import { Layout } from './components/layout/Layout';
+
+import Login from './pages/auth/Login';
+import Dashboard from './pages/dashboard/Dashboard';
+import EquipmentList from './pages/equipment/EquipmentList';
+import EquipmentDetail from './pages/equipment/EquipmentDetail';
+import RequestKanban from './pages/requests/RequestKanban';
+import CreateRequest from './pages/requests/CreateRequest';
+import TeamsList from './pages/teams/TeamsList';
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <Layout>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+
+                  <Route path="/equipment" element={<EquipmentList />} />
+                  <Route path="/equipment/:id" element={<EquipmentDetail />} />
+
+                  <Route path="/requests" element={<RequestKanban />} />
+                  <Route path="/requests/create" element={<CreateRequest />} />
+
+                  <Route path="/teams" element={<TeamsList />} />
+                </Routes>
+              </Layout>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
+
+export default App;
