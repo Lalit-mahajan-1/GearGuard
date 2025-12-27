@@ -179,16 +179,15 @@ function RequestCard({
             </div>
 
             {/* Actions */}
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3 space-y-2">
                 {/* Move */}
-                <div className="flex items-center gap-2">
-                    <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <div className="inline-flex items-center gap-2 text-xs text-slate-500 shrink-0">
                         <ArrowRightLeft className="h-4 w-4 text-slate-400" />
-                        Move
+                        <span className="hidden sm:inline">Move</span>
                     </div>
-
                     <select
-                        className="ml-auto w-44 rounded-md border bg-white px-2 py-1.5 text-xs outline-none transition
+                        className="flex-1 rounded-md border bg-white px-2 py-1.5 text-xs outline-none transition
                        focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
                         value={item?.status || ""}
                         onChange={(e) => onMove(item._id, e.target.value)}
@@ -203,14 +202,13 @@ function RequestCard({
 
                 {/* Assign */}
                 {Array.isArray(technicians) && technicians.length > 0 ? (
-                    <div className="flex items-center gap-2">
-                        <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                        <div className="inline-flex items-center gap-2 text-xs text-slate-500 shrink-0">
                             <UserPlus className="h-4 w-4 text-slate-400" />
-                            Assign
+                            <span className="hidden sm:inline">Assign</span>
                         </div>
-
                         <select
-                            className="ml-auto w-44 rounded-md border bg-white px-2 py-1.5 text-xs outline-none transition
+                            className="flex-1 rounded-md border bg-white px-2 py-1.5 text-xs outline-none transition
                          focus:ring-2 focus:ring-slate-200 focus:border-slate-300"
                             value={item?.assignedTechnician?._id || ""}
                             onChange={(e) => {
@@ -237,7 +235,7 @@ function RequestCard({
                             const ok = window.confirm("Scrap this request?");
                             if (ok) onScrap(item);
                         }}
-                        className="mt-1 inline-flex items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700
+                        className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700
                        hover:bg-red-100 active:scale-[0.99] transition"
                     >
                         <Trash2 className="h-4 w-4" />
@@ -542,11 +540,22 @@ const ManagerDashboard = () => {
     };
 
     const handleScrap = async (req) => {
+        // Optimistically update state immediately
+        setRequests((prev) =>
+            prev.map((r) => (r._id === req._id ? { ...r, status: "Scrapped" } : r))
+        );
         try {
-            await axios.put(`${API}/requests/${req._id}`, { status: "Scrapped" });
+            const response = await axios.put(`${API}/requests/${req._id}`, { status: "Scrapped" });
+            console.log("✓ Scrap API call succeeded:", response.data);
+            // No need to refresh if optimistic update succeeded
+        } catch (error) {
+            console.error("✗ Failed to scrap request:", {
+                status: error.response?.status,
+                message: error.response?.data?.message || error.message,
+                error: error.response?.data
+            });
+            // On error, refresh to get correct state
             await refreshRequests();
-        } catch (e) {
-            console.error("Failed to scrap");
         }
     };
 

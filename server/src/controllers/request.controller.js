@@ -123,6 +123,8 @@ export const updateRequest = async (req, res) => {
         throw new Error('Request not found');
     }
 
+    console.log(`[updateRequest] User role: ${req.user?.role}, Request ID: ${req.params.id}, New status: ${req.body.status}`);
+
     // Role-based restrictions
     if (req.user?.role === 'Technician') {
         const allowedFields = ['status', 'duration', 'assignedTechnician'];
@@ -170,41 +172,72 @@ export const updateRequest = async (req, res) => {
 
     // Once scrapped, request becomes read-only for status changes
     if (request.status === 'Scrapped') {
+        console.log(`[updateRequest] Request already scrapped, rejecting update`);
         return res.status(400).json({ message: 'Request is scrapped and read-only' });
     }
 
     // Manager-only: handle scrap; perform equipment + request updates safely
     if (req.body.status === 'Scrapped' && request.status !== 'Scrapped') {
-        if (req.user?.role !== 'Manager') {
-            return res.status(403).json({ message: 'Only Managers can mark a request as Scrapped' });
+        console.log(`[updateRequest] Scrap attempt - User role: ${req.user?.role}`);
+        if (req.user?.role !== 'Manager' && req.user?.role !== 'Admin') {
+            console.log(`[updateRequest] Scrap denied - only Manager/Admin can scrap, user is: ${req.user?.role}`);
+            return res.status(403).json({ message: 'Only Managers and Admins can mark a request as Scrapped' });
         }
         const session = await mongoose.startSession();
         try {
+            console.log(`[Scrap] Starting transaction for request ${request._id}`);
             session.startTransaction();
+            
+            console.log(`[Scrap] Fetching equipment with ID: ${request.equipment}`);
             const equipment = await Equipment.findById(request.equipment).session(session);
             if (!equipment) {
                 await session.abortTransaction();
                 session.endSession();
+                console.log(`[Scrap] ✗ Equipment not found for ID: ${request.equipment}`);
                 return res.status(404).json({ message: 'Linked equipment not found' });
             }
+            
+            console.log(`[Scrap] Equipment found: ${equipment._id}, Current status: ${equipment.status}`);
             const scrapReason = req.body.scrapReason || (request.notes?.length ? request.notes[request.notes.length - 1].text : '') || `Scrapped via request ${request._id}`;
+            
+            console.log(`[Scrap] Updating equipment status to Scrapped...`);
             equipment.status = 'Scrapped';
             equipment.isScrapped = true;
             equipment.scrappedAt = new Date();
             equipment.scrapReason = scrapReason;
             equipment.scrappedBy = req.user._id;
-            await equipment.save({ session });
+            
+            await equipment.save();
+            console.log(`[Scrap] ✓ Equipment ${equipment._id} saved successfully`);
 
+            console.log(`[Scrap] Updating request status to Scrapped...`);
             request.status = 'Scrapped';
-            await request.save({ session });
+            await request.save();
+            console.log(`[Scrap] ✓ Request ${request._id} saved successfully`);
 
-            await session.commitTransaction();
-            session.endSession();
+            console.log(`[Scrap] ✓✓ Scrap operation completed successfully`);
             return res.json(request);
         } catch (err) {
-            try { await session.abortTransaction(); } catch {}
-            session.endSession();
-            return res.status(500).json({ message: 'Failed to scrap equipment', error: err?.message });
+            console.log(`[Scrap] ✗✗ Scrap operation error:`, {
+                message: err?.message,
+                code: err?.code,
+                name: err?.name,
+                validationErrors: err?.errors ? Object.keys(err.errors) : null
+            });
+            console.error(err);
+            // Send back full error details for debugging
+            return res.status(500).json({ 
+                message: 'Failed to scrap equipment', 
+                error: err?.message,
+                validationErrors: err?.errors ? Object.entries(err.errors).map(([key, val]) => ({
+                    field: key,
+                    message: val?.message
+                })) : null,
+                details: {
+                    code: err?.code,
+                    name: err?.name
+                }
+            });
         }
     }
     if (req.body.status === 'Repaired' && request.status !== 'Repaired') {
