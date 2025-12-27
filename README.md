@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # GearGuard - Ultimate Maintenance Tracker
 
 GearGuard is a full-stack MERN application designed to manage equipment maintenance, teams, and requests with an Odoo-style simplified interface.
@@ -59,7 +58,5 @@ npm run dev     # Starts client on port 5173
 3. **Kanban**: Drag the new request from "New" to "In Progress".
 4. **Equipment**: Go to "Equipment" -> Select an item. Click the "Maintenance Requests" smart button to see history.
 
-Enjoy building with GearGuard!
-=======
-ODOOxADANI Virtual Round
->>>>>>> ef6a9a700e3567022b2dd5ac8a43ac60042d392c
+
+
