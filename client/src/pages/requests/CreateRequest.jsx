@@ -78,9 +78,15 @@ const CreateRequest = () => {
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 >
                                     <option value="">Select Equipment</option>
-                                    {equipmentList.map(eq => (
-                                        <option key={eq._id} value={eq._id}>{eq.name} ({eq.serialNumber})</option>
-                                    ))}
+                                                                        {equipmentList.map(eq => (
+                                                                                <option
+                                                                                    key={eq._id}
+                                                                                    value={eq._id}
+                                                                                    disabled={eq.status === 'Scrapped' || eq.isScrapped}
+                                                                                >
+                                                                                    {eq.name} ({eq.serialNumber}){(eq.status === 'Scrapped' || eq.isScrapped) ? ' — Scrapped' : ''}
+                                                                                </option>
+                                                                        ))}
                                 </select>
                             </div>
                         </div>

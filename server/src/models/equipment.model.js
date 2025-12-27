@@ -31,6 +31,20 @@ const equipmentSchema = new mongoose.Schema({
         enum: ['Operational', 'Down', 'Under Maintenance', 'Scrapped'],
         default: 'Operational'
     },
+    isScrapped: {
+        type: Boolean,
+        default: false
+    },
+    scrappedAt: {
+        type: Date
+    },
+    scrapReason: {
+        type: String
+    },
+    scrappedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    },
     assignedDepartment: {
         type: String
     },
