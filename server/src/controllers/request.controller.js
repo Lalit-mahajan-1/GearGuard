@@ -13,9 +13,11 @@ export const getRequests = async (req, res) => {
     if (type) query.type = type;
     if (assignedTechnician) query.assignedTechnician = assignedTechnician;
 
-    // Enforce technician visibility: only their assigned requests
+    // Technician visibility: assigned to them OR in their team
     if (req.user?.role === 'Technician') {
-        query.assignedTechnician = req.user._id;
+        const teamId = req.user.team;
+        query.$or = [{ assignedTechnician: req.user._id }];
+        if (teamId) query.$or.push({ assignedTeam: teamId });
     }
 
     const requests = await MaintenanceRequest.find(query)
@@ -24,6 +26,36 @@ export const getRequests = async (req, res) => {
         .populate('assignedTechnician', 'name avatar')
         .populate('requestedBy', 'name');
     
+    res.json(requests);
+};
+
+// @desc    Get scheduled requests for calendar display
+// @route   GET /api/requests/calendar/scheduled
+// @access  Private
+export const getScheduledRequests = async (req, res) => {
+    const { start, end } = req.query;
+    const query = { scheduledDate: { $ne: null } };
+
+    // Optional date range filter
+    if (start || end) {
+        query.scheduledDate = {};
+        if (start) query.scheduledDate.$gte = new Date(start);
+        if (end) query.scheduledDate.$lte = new Date(end);
+    }
+
+    // Technician visibility: assigned to them OR in their team
+    if (req.user?.role === 'Technician') {
+        const teamId = req.user.team;
+        query.$or = [{ assignedTechnician: req.user._id }];
+        if (teamId) query.$or.push({ assignedTeam: teamId });
+    }
+
+    const requests = await MaintenanceRequest.find(query)
+        .populate('equipment', 'name serialNumber')
+        .populate('assignedTeam', 'name')
+        .populate('assignedTechnician', 'name avatar')
+        .populate('requestedBy', 'name');
+
     res.json(requests);
 };
 
@@ -44,28 +76,6 @@ export const getRequestById = async (req, res) => {
         res.status(404);
         throw new Error('Request not found');
     }
-};
-
-// @desc    Get scheduled maintenance requests for calendar view
-// @route   GET /api/requests/calendar/scheduled
-// @access  Private
-export const getScheduledRequests = async (req, res) => {
-    const { role, userId } = req.query;
-    const query = { scheduledDate: { $exists: true, $ne: null } };
-
-    // Filter based on user role
-    if (role === 'Technician' && userId) {
-        query.assignedTechnician = userId;
-    }
-
-    const requests = await MaintenanceRequest.find(query)
-        .populate('equipment', 'name serialNumber')
-        .populate('assignedTeam', 'name')
-        .populate('assignedTechnician', 'name avatar')
-        .populate('requestedBy', 'name')
-        .sort({ scheduledDate: 1 });
-
-    res.json(requests);
 };
 
 // @desc    Create new request
@@ -109,12 +119,18 @@ export const updateRequest = async (req, res) => {
 
     // Role-based restrictions
     if (req.user?.role === 'Technician') {
-        const allowedFields = ['status', 'duration'];
+        const allowedFields = ['status', 'duration', 'assignedTechnician'];
         const keys = Object.keys(req.body);
-        // technicians cannot assign/reassign tech or scrap
+        // Technicians: self-assign only within same team
         if (req.body.assignedTechnician) {
-            res.status(403);
-            throw new Error('Technicians cannot reassign requests');
+            if (String(req.body.assignedTechnician) !== String(req.user._id)) {
+                res.status(403);
+                throw new Error('Technicians can only self-assign');
+            }
+            if (String(request.assignedTeam) !== String(req.user.team)) {
+                res.status(403);
+                throw new Error('Technician not in the assigned team');
+            }
         }
         if (req.body.status) {
             const to = req.body.status;
@@ -123,6 +139,14 @@ export const updateRequest = async (req, res) => {
             if (!allowedMove) {
                 res.status(403);
                 throw new Error('Invalid status transition for Technician');
+            }
+            // Duration required before marking as Repaired
+            if (to === 'Repaired') {
+                const duration = req.body.duration ?? request.duration;
+                if (!duration || Number(duration) <= 0) {
+                    res.status(400);
+                    throw new Error('Duration must be provided before marking as Repaired');
+                }
             }
         }
         // ensure only allowed fields are updated
@@ -151,6 +175,19 @@ export const updateRequest = async (req, res) => {
         }
     }
 
+    // Manager assignment validation: technician must belong to request's team
+    if (req.body.assignedTechnician) {
+        const tech = await (await import('../models/user.model.js')).default.findById(req.body.assignedTechnician);
+        if (!tech) {
+            res.status(404);
+            throw new Error('Technician not found');
+        }
+        if (String(tech.team) !== String(request.assignedTeam)) {
+            res.status(400);
+            throw new Error('Technician must belong to the assigned team');
+        }
+    }
+
     const updatedRequest = await MaintenanceRequest.findByIdAndUpdate(
         req.params.id,
         req.body,
@@ -158,6 +195,31 @@ export const updateRequest = async (req, res) => {
     );
 
     res.json(updatedRequest);
+};
+
+// @desc    Hours worked per technician (Repaired requests)
+// @route   GET /api/requests/analytics/hours
+// @access  Private
+export const getHoursWorkedByTechnician = async (req, res) => {
+    const match = { status: 'Repaired' };
+    if (req.user?.role === 'Technician') {
+        match.assignedTeam = req.user.team;
+    }
+    // Optional team filter for managers
+    if (req.user?.role !== 'Technician' && req.query.team) {
+        match.assignedTeam = req.query.team;
+    }
+
+    const results = await MaintenanceRequest.aggregate([
+        { $match: match },
+        { $group: { _id: '$assignedTechnician', hours: { $sum: { $ifNull: ['$duration', 0] } } } },
+        { $match: { _id: { $ne: null } } },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+        { $unwind: '$user' },
+        { $project: { technicianId: '$_id', name: '$user.name', hours: 1 } }
+    ]);
+
+    res.json(results);
 };
 
 // @desc    Add note to request

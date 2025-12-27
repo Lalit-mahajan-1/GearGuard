@@ -10,6 +10,7 @@ import KanbanBoard from '../../components/kanban/KanbanBoard';
 const TechnicianDashboard = () => {
     const { user } = useAuth();
     const [requests, setRequests] = useState([]);
+    const [hoursData, setHoursData] = useState([]);
 
     useEffect(() => {
         const fetchRequests = async () => {
@@ -21,6 +22,15 @@ const TechnicianDashboard = () => {
             }
         };
         fetchRequests();
+        const fetchHours = async () => {
+            try {
+                const { data } = await axios.get('http://localhost:5000/api/requests/analytics/hours');
+                setHoursData(data);
+            } catch (e) {
+                console.error('Failed to fetch hours analytics');
+            }
+        };
+        fetchHours();
     }, [user._id]);
 
     const refresh = async () => {
@@ -73,7 +83,7 @@ const TechnicianDashboard = () => {
                     </Button>
                 </Link>
             </div>
-            <Card>
+                <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center">
                         <ClipboardList className="mr-2 h-5 w-5" /> Assigned Requests
@@ -90,6 +100,42 @@ const TechnicianDashboard = () => {
                     />
                 </CardContent>
             </Card>
+
+                {/* My Team moved to sidebar for persistent visibility */}
+
+                {/* Hours Worked */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Hours Worked (Repaired)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {hoursData.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">No repaired requests yet.</p>
+                        ) : (
+                            (() => {
+                                const max = Math.max(...hoursData.map(h => h.hours));
+                                return (
+                                    <div className="space-y-3">
+                                        {hoursData.map(h => (
+                                            <div key={h.technicianId}>
+                                                <div className="flex justify-between text-sm">
+                                                    <span>{h.name}</span>
+                                                    <span className="text-muted-foreground">{h.hours}h</span>
+                                                </div>
+                                                <div className="h-2 bg-muted rounded">
+                                                    <div
+                                                        className="h-2 rounded bg-primary"
+                                                        style={{ width: `${Math.max(5, (h.hours / max) * 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })()
+                        )}
+                    </CardContent>
+                </Card>
         </div>
     );
 };

@@ -5,15 +5,43 @@ import axios from 'axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { useAuth } from '../../context/AuthContext';
 
 const CreateRequest = () => {
     const navigate = useNavigate();
-    const { register, handleSubmit } = useForm();
+    const { user } = useAuth();
+    const { register, handleSubmit, setValue } = useForm();
     const [equipmentList, setEquipmentList] = useState([]);
+    const [selectedEquipmentId, setSelectedEquipmentId] = useState('');
+    const [autoDetails, setAutoDetails] = useState({ category: '', teamName: '', teamId: '' });
 
     useEffect(() => {
         axios.get('http://localhost:5000/api/equipment').then(res => setEquipmentList(res.data));
     }, []);
+
+    // Fetch selected equipment details to auto-fill category and team
+    useEffect(() => {
+        const fetchDetails = async () => {
+            if (!selectedEquipmentId) {
+                setAutoDetails({ category: '', teamName: '', teamId: '' });
+                return;
+            }
+            try {
+                const { data } = await axios.get(`http://localhost:5000/api/equipment/${selectedEquipmentId}`);
+                const team = data.maintenanceTeam;
+                setAutoDetails({
+                    category: data.category || '',
+                    teamName: team?.name || '',
+                    teamId: team?._id || ''
+                });
+                // Pre-fill assignedTeam if override not used
+                setValue('assignedTeam', team?._id || '');
+            } catch (err) {
+                console.error('Failed to fetch equipment details', err);
+            }
+        };
+        fetchDetails();
+    }, [selectedEquipmentId, setValue]);
 
     const onSubmit = async (data) => {
         try {
@@ -44,6 +72,9 @@ const CreateRequest = () => {
                                 <label className="text-sm font-medium">Equipment</label>
                                 <select
                                     {...register('equipment', { required: true })}
+                                    onChange={(e) => {
+                                        setSelectedEquipmentId(e.target.value);
+                                    }}
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                 >
                                     <option value="">Select Equipment</option>
@@ -51,6 +82,18 @@ const CreateRequest = () => {
                                         <option key={eq._id} value={eq._id}>{eq.name} ({eq.serialNumber})</option>
                                     ))}
                                 </select>
+                            </div>
+                        </div>
+
+                        {/* Auto-filled Equipment Details */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Equipment Category</label>
+                                <Input value={autoDetails.category} placeholder="Auto-filled from equipment" readOnly />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Assigned Maintenance Team</label>
+                                <Input value={autoDetails.teamName} placeholder="Auto-filled from equipment" readOnly />
                             </div>
                         </div>
 
@@ -87,10 +130,21 @@ const CreateRequest = () => {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Assign Team (Override)</label>
-                                <select {...register('assignedTeam')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                                    <option value="">Auto-Assign (Default)</option>
-                                    {/* Ideally we fetch teams here too, but for speed relying on backend auto-assign if empty */}
-                                </select>
+                                {['Admin', 'Manager'].includes(user?.role) ? (
+                                    <select {...register('assignedTeam')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                                        <option value="">Auto-Assign (Default)</option>
+                                        {/* Optionally list teams here; leaving for backend auto-assign unless overridden */}
+                                        {autoDetails.teamId && (
+                                            <option value={autoDetails.teamId}>Default: {autoDetails.teamName}</option>
+                                        )}
+                                    </select>
+                                ) : (
+                                    // For normal users, keep assignedTeam pre-filled and hidden
+                                    <>
+                                        <Input value={autoDetails.teamName} readOnly />
+                                        <input type="hidden" {...register('assignedTeam')} />
+                                    </>
+                                )}
                             </div>
                         </div>
 

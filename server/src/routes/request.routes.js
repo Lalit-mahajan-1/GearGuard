@@ -6,7 +6,8 @@ import {
     createRequest,
     updateRequest,
     deleteRequest,
-    addNote
+    addNote,
+    getHoursWorkedByTechnician
 } from '../controllers/request.controller.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 
@@ -26,5 +27,9 @@ router.route('/:id')
 
 router.route('/:id/notes')
     .post(protect, addNote);
+
+// Analytics: hours per technician (Repaired)
+router.route('/analytics/hours')
+    .get(protect, authorize('Admin', 'Manager', 'Technician'), getHoursWorkedByTechnician);
 
 export default router;

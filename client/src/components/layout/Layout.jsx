@@ -11,10 +11,13 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 
 export const Layout = ({ children }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const [teamMembers, setTeamMembers] = useState([]);
 
     const navItems = [
         { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'Technician', 'User'] },
@@ -35,6 +38,24 @@ export const Layout = ({ children }) => {
         return true;
     });
 
+    // Fetch team members for Technician dashboard sidebar
+    useEffect(() => {
+        const shouldShowTeam = user?.role === 'Technician' && location.pathname.startsWith('/dashboard');
+        if (!shouldShowTeam) {
+            setTeamMembers([]);
+            return;
+        }
+        const fetchMembers = async () => {
+            try {
+                const { data } = await axios.get('http://localhost:5000/api/teams/mine/members');
+                setTeamMembers(data);
+            } catch (e) {
+                setTeamMembers([]);
+            }
+        };
+        fetchMembers();
+    }, [user?.role, location.pathname]);
+
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
             {/* Sidebar */}
@@ -44,7 +65,7 @@ export const Layout = ({ children }) => {
                     <span className="text-xl font-bold">GearGuard</span>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2">
+                <nav className="p-4 space-y-2">
                     {filteredNavItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname.startsWith(item.path);
@@ -65,6 +86,36 @@ export const Layout = ({ children }) => {
                         );
                     })}
                 </nav>
+
+                {/* Technician Sidebar: My Team */}
+                {user?.role === 'Technician' && location.pathname.startsWith('/dashboard') && (
+                    <div className="px-4 py-3 border-t">
+                        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">My Team</div>
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            {teamMembers.length === 0 ? (
+                                <div className="text-sm text-muted-foreground">No team members</div>
+                            ) : (
+                                teamMembers.map(m => {
+                                    const isMe = m._id === user?._id;
+                                    return (
+                                        <div key={m._id} className={cn(
+                                            'flex items-center gap-3 rounded-md p-2',
+                                            isMe ? 'bg-primary/10 text-primary font-medium' : 'text-foreground'
+                                        )}>
+                                            <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
+                                                {(m.name || '?').slice(0,2).toUpperCase()}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="text-sm truncate">{m.name}</div>
+                                                {m.role && <div className="text-[11px] text-muted-foreground">{m.role}</div>}
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className="p-4 border-t">
                     <Link to="/profile" className="flex items-center space-x-3 mb-4 px-2 hover:bg-accent rounded-md p-2 transition-colors">
