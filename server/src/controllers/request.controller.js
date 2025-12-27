@@ -5,15 +5,18 @@ import Equipment from '../models/equipment.model.js';
 // @route   GET /api/requests
 // @access  Private
 export const getRequests = async (req, res) => {
-    const { status, equipment, type } = req.query;
+    const { status, equipment, type, assignedTechnician } = req.query;
     const query = {};
 
     if (status) query.status = status;
     if (equipment) query.equipment = equipment;
     if (type) query.type = type;
+    if (assignedTechnician) query.assignedTechnician = assignedTechnician;
 
-    // Role based visibility could be added here (e.g. Technicians only see their team's requests)
-    // For now, allowing all for simplicity or based on 'protect' middleware context if needed.
+    // Enforce technician visibility: only their assigned requests
+    if (req.user?.role === 'Technician') {
+        query.assignedTechnician = req.user._id;
+    }
 
     const requests = await MaintenanceRequest.find(query)
         .populate('equipment', 'name serialNumber')
@@ -82,7 +85,35 @@ export const updateRequest = async (req, res) => {
         throw new Error('Request not found');
     }
 
-    // Logic: If status changes to Scrapped, update Equipment status
+    // Role-based restrictions
+    if (req.user?.role === 'Technician') {
+        const allowedFields = ['status', 'duration'];
+        const keys = Object.keys(req.body);
+        // technicians cannot assign/reassign tech or scrap
+        if (req.body.assignedTechnician) {
+            res.status(403);
+            throw new Error('Technicians cannot reassign requests');
+        }
+        if (req.body.status) {
+            const to = req.body.status;
+            const from = request.status;
+            const allowedMove = (from === 'New' && to === 'In Progress') || (from === 'In Progress' && to === 'Repaired');
+            if (!allowedMove) {
+                res.status(403);
+                throw new Error('Invalid status transition for Technician');
+            }
+        }
+        // ensure only allowed fields are updated
+        const sanitized = keys.reduce((acc, k) => {
+            if (allowedFields.includes(k)) acc[k] = req.body[k];
+            return acc;
+        }, {});
+
+        const updated = await MaintenanceRequest.findByIdAndUpdate(req.params.id, sanitized, { new: true, runValidators: true });
+        return res.json(updated);
+    }
+
+    // Manager/Admin logic: Equipment auto updates on status changes
     if (req.body.status === 'Scrapped' && request.status !== 'Scrapped') {
         const equipment = await Equipment.findById(request.equipment);
         if (equipment) {
@@ -90,10 +121,8 @@ export const updateRequest = async (req, res) => {
             await equipment.save();
         }
     }
-    
-    // Logic: If status changes to Repaired, update Equipment status to Operational
     if (req.body.status === 'Repaired' && request.status !== 'Repaired') {
-         const equipment = await Equipment.findById(request.equipment);
+        const equipment = await Equipment.findById(request.equipment);
         if (equipment) {
             equipment.status = 'Operational';
             await equipment.save();

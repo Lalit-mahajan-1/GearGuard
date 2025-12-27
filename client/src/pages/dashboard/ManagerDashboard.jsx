@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Wrench, AlertTriangle, Users } from 'lucide-react';
+import { Wrench, AlertTriangle, Users, Filter } from 'lucide-react';
+import KanbanBoard from '../../components/kanban/KanbanBoard';
 
 const ManagerDashboard = () => {
     const [stats, setStats] = useState({
@@ -11,8 +12,13 @@ const ManagerDashboard = () => {
         activeTeams: 0
     });
 
+    const [requests, setRequests] = useState([]);
+    const [teams, setTeams] = useState([]);
+    const [equipment, setEquipment] = useState([]);
+    const [filters, setFilters] = useState({ technician: '', team: '', equipment: '', status: '' });
+
     useEffect(() => {
-        const fetchStats = async () => {
+        const fetchAll = async () => {
             try {
                 const [eqRes, reqRes, teamRes] = await Promise.all([
                     axios.get('http://localhost:5000/api/equipment'),
@@ -28,9 +34,7 @@ const ManagerDashboard = () => {
                     new Date(r.scheduledDate) < now
                 ).length;
 
-                const open = reqRes.data.filter(r =>
-                    ['New', 'In Progress'].includes(r.status)
-                ).length;
+                const open = reqRes.data.filter(r => ['New', 'In Progress'].includes(r.status)).length;
 
                 setStats({
                     totalEquipment: eqRes.data.length,
@@ -38,12 +42,66 @@ const ManagerDashboard = () => {
                     overdueRequests: overdue,
                     activeTeams: teamRes.data.length
                 });
+
+                setEquipment(eqRes.data);
+                setRequests(reqRes.data);
+                setTeams(teamRes.data);
             } catch (error) {
-                console.error("Failed to fetch dashboard data");
+                console.error('Failed to fetch dashboard data');
             }
         };
-        fetchStats();
+        fetchAll();
     }, []);
+
+    const technicians = useMemo(() => {
+        const all = teams.flatMap(t => t.members || []);
+        const map = new Map();
+        all.forEach(u => { if (!map.has(u._id)) map.set(u._id, u); });
+        return Array.from(map.values());
+    }, [teams]);
+
+    const filteredRequests = useMemo(() => {
+        return requests.filter(r => {
+            if (filters.status && r.status !== filters.status) return false;
+            if (filters.equipment && r.equipment?._id !== filters.equipment) return false;
+            if (filters.team && r.assignedTeam?._id !== filters.team) return false;
+            if (filters.technician && r.assignedTechnician?._id !== filters.technician) return false;
+            return true;
+        });
+    }, [requests, filters]);
+
+    const refreshRequests = async () => {
+        const { data } = await axios.get('http://localhost:5000/api/requests');
+        setRequests(data);
+    };
+
+    const handleMove = async (id, toStatus) => {
+        // optimistic update
+        setRequests(prev => prev.map(r => r._id === id ? { ...r, status: toStatus } : r));
+        try {
+            await axios.put(`http://localhost:5000/api/requests/${id}`, { status: toStatus });
+        } catch (e) {
+            await refreshRequests();
+        }
+    };
+
+    const handleAssign = async (req, technicianId) => {
+        try {
+            await axios.put(`http://localhost:5000/api/requests/${req._id}`, { assignedTechnician: technicianId });
+            await refreshRequests();
+        } catch (e) {
+            console.error('Failed to assign technician');
+        }
+    };
+
+    const handleScrap = async (req) => {
+        try {
+            await axios.put(`http://localhost:5000/api/requests/${req._id}`, { status: 'Scrapped' });
+            await refreshRequests();
+        } catch (e) {
+            console.error('Failed to scrap');
+        }
+    };
 
     const cards = [
         { title: "Total Equipment", value: stats.totalEquipment, icon: Wrench, color: "text-blue-600" },
@@ -71,7 +129,43 @@ const ManagerDashboard = () => {
                     )
                 })}
             </div>
-            {/* Add more Manager specific widgets here like "Team Performance" */}
+            {/* Filters */}
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center"><Filter className="h-4 w-4 mr-2" /> Filters</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid md:grid-cols-4 gap-3">
+                        <select className="border rounded px-2 py-1 text-sm" value={filters.status} onChange={(e) => setFilters(f => ({ ...f, status: e.target.value }))}>
+                            <option value="">Status: All</option>
+                            {['New','In Progress','Repaired','Scrapped'].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <select className="border rounded px-2 py-1 text-sm" value={filters.technician} onChange={(e) => setFilters(f => ({ ...f, technician: e.target.value }))}>
+                            <option value="">Technician: All</option>
+                            {technicians.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                        </select>
+                        <select className="border rounded px-2 py-1 text-sm" value={filters.team} onChange={(e) => setFilters(f => ({ ...f, team: e.target.value }))}>
+                            <option value="">Team: All</option>
+                            {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+                        </select>
+                        <select className="border rounded px-2 py-1 text-sm" value={filters.equipment} onChange={(e) => setFilters(f => ({ ...f, equipment: e.target.value }))}>
+                            <option value="">Equipment: All</option>
+                            {equipment.map(eq => <option key={eq._id} value={eq._id}>{eq.name}</option>)}
+                        </select>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Manager Kanban */}
+            <KanbanBoard
+                role="Manager"
+                items={filteredRequests}
+                columns={['New','In Progress','Repaired','Scrapped']}
+                technicians={technicians}
+                onMove={handleMove}
+                onAssignTechnician={handleAssign}
+                onScrap={handleScrap}
+            />
         </div>
     );
 };
