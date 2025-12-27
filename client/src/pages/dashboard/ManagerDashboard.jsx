@@ -542,11 +542,12 @@ const ManagerDashboard = () => {
     };
 
     const handleScrap = async (req) => {
+        setRequests((prev) => prev.map((r) => (r._id === req._id ? { ...r, status: "Scrapped" } : r)));
         try {
             await axios.put(`${API}/requests/${req._id}`, { status: "Scrapped" });
-            await refreshRequests();
         } catch (e) {
             console.error("Failed to scrap");
+            await refreshRequests();
         }
     };
 
