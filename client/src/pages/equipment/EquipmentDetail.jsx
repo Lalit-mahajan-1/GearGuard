@@ -11,16 +11,60 @@ const EquipmentDetail = () => {
     const { id } = useParams();
     const [equipment, setEquipment] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [technicians, setTechnicians] = useState([]);
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
-        axios.get(`http://localhost:5000/api/equipment/${id}`).then(res => {
-            setEquipment(res.data);
-            setLoading(false);
-        }).catch(err => {
-            console.error('Failed to load equipment:', err);
-            setLoading(false);
-        });
+        const fetchData = async () => {
+            try {
+                const [eqRes, teamRes] = await Promise.all([
+                    axios.get(`http://localhost:5000/api/equipment/${id}`),
+                    axios.get(`http://localhost:5000/api/teams`)
+                ]);
+
+                setEquipment(eqRes.data);
+
+                // Flatten all members from all teams to get technician list
+                const allTechs = teamRes.data.flatMap(t => t.members || []);
+                // Remove duplicates by ID
+                const uniqueTechs = Array.from(new Map(allTechs.map(t => [t._id, t])).values());
+                setTechnicians(uniqueTechs);
+
+                setLoading(false);
+            } catch (err) {
+                console.error('Failed to load data:', err);
+                setLoading(false);
+            }
+        };
+        fetchData();
     }, [id]);
+
+    const handleTechnicianChange = async (techId) => {
+        if (!equipment) return;
+        setUpdating(true);
+        try {
+            const { data } = await axios.put(`http://localhost:5000/api/equipment/${id}`, {
+                defaultTechnician: techId
+            });
+            setEquipment(prev => ({ ...prev, defaultTechnician: data.defaultTechnician }));
+
+            // Re-fetch to ensure populated fields are correct if needed, 
+            // but for now we just updated the state optimistically or via response?
+            // The response from update might not be populated. 
+            // Let's manually update the populated field in state for the UI
+            if (techId) {
+                const selectedTech = technicians.find(t => t._id === techId);
+                setEquipment(prev => ({ ...prev, defaultTechnician: selectedTech }));
+            } else {
+                setEquipment(prev => ({ ...prev, defaultTechnician: null }));
+            }
+
+        } catch (error) {
+            console.error("Failed to update technician", error);
+        } finally {
+            setUpdating(false);
+        }
+    };
 
     if (loading) return (
         <div className="flex items-center justify-center py-12">
@@ -30,7 +74,7 @@ const EquipmentDetail = () => {
             </div>
         </div>
     );
-    
+
     if (!equipment) return (
         <div className="flex items-center justify-center py-12">
             <div className="text-center">
@@ -157,7 +201,7 @@ const EquipmentDetail = () => {
                         <div>
                             <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Warranty Expiration</span>
                             <p style={{ color: 'rgb(30, 33, 40)' }}>
-                                {equipment.warrantyExpiration 
+                                {equipment.warrantyExpiration
                                     ? format(new Date(equipment.warrantyExpiration), 'MMM dd, yyyy')
                                     : 'No warranty info'
                                 }
@@ -199,51 +243,54 @@ const EquipmentDetail = () => {
                         Team & Assignment
                     </CardTitle>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="flex items-start space-x-4">
-                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
-                                <Users className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Assigned Team</p>
-                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.maintenanceTeam?.name || 'No team assigned'}</p>
-                            </div>
+                <CardContent className="space-y-6">
+                    <div className="flex items-start space-x-4">
+                        <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
+                            <Users className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
                         </div>
-
-                        <div className="flex items-start space-x-4">
-                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
-                                <User className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Primary Technician</p>
-                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.defaultTechnician?.name || 'Not assigned'}</p>
-                            </div>
+                        <div className="flex-1">
+                            <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Assigned Team</p>
+                            <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.maintenanceTeam?.name || 'No team assigned'}</p>
                         </div>
+                    </div>
 
-                        <div className="flex items-start space-x-4">
-                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
-                                <Zap className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Assigned Manager</p>
-                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.assignedTo?.name || 'Unassigned'}</p>
-                            </div>
+                    <div className="flex items-start space-x-4">
+                        <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
+                            <User className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
                         </div>
-
-                        <div className="flex items-start space-x-4">
-                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
-                                <Calendar className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
-                            </div>
-                            <div className="flex-1">
-                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Department</p>
-                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.assignedDepartment || 'Not specified'}</p>
-                            </div>
+                        <div className="flex-1">
+                            <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Primary Technician</p>
+                            <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.defaultTechnician?.name || 'Not assigned'}</p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
-        </div>
+
+            {/* Equipment Image */}
+            {equipment.image && (
+                <Card style={{
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    border: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                }}>
+                    <CardHeader className="pb-3 border-b border-slate-50">
+                        <CardTitle className="text-base flex items-center gap-2" style={{ color: 'rgb(30, 33, 40)' }}>
+                            <Zap className="h-4 w-4" style={{ color: 'rgb(42, 112, 255)' }} />
+                            Equipment Image
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="flex justify-center items-center rounded-xl bg-slate-50 border border-slate-100 p-4 h-[400px]">
+                            <img
+                                src={equipment.image}
+                                alt={equipment.name}
+                                className="h-full w-full object-contain"
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+        </div >
     );
 };
 

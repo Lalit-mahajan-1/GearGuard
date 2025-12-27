@@ -188,6 +188,13 @@ export const updateRequest = async (req, res) => {
         if (String(tech.team) !== String(request.assignedTeam)) {
             req.body.assignedTeam = tech.team;
         }
+
+        // Sync to Equipment: Update the equipment's default/primary technician to the one currently assigned
+        const equipment = await Equipment.findById(request.equipment);
+        if (equipment) {
+            equipment.defaultTechnician = req.body.assignedTechnician;
+            await equipment.save();
+        }
     }
 
     const updatedRequest = await MaintenanceRequest.findByIdAndUpdate(
@@ -205,7 +212,7 @@ export const updateRequest = async (req, res) => {
 export const getHoursWorkedByTechnician = async (req, res) => {
     const match = { status: 'Repaired' };
     if (req.user?.role === 'Technician') {
-        match.assignedTeam = req.user.team;
+        match.assignedTechnician = req.user._id;
     }
     // Optional team filter for managers
     if (req.user?.role !== 'Technician' && req.query.team) {
@@ -240,7 +247,7 @@ export const getHoursWorkedByTechnician = async (req, res) => {
 export const getAnalyticsSummary = async (req, res) => {
     const match = { status: 'Repaired' };
     if (req.user?.role === 'Technician') {
-        match.assignedTeam = req.user.team;
+        match.assignedTechnician = req.user._id;
     }
     if (req.user?.role !== 'Technician' && req.query.team) {
         try { match.assignedTeam = new mongoose.Types.ObjectId(req.query.team); } catch {}

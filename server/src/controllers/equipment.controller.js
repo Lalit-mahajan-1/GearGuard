@@ -16,9 +16,9 @@ export const getEquipment = async (req, res) => {
 // @access  Private
 export const getEquipmentById = async (req, res) => {
     const equipment = await Equipment.findById(req.params.id)
-        .populate('maintenanceTeam', 'name description')
-        .populate('assignedTo', 'name email')
-        .populate('defaultTechnician', 'name email');
+        .populate('maintenanceTeam', 'name')
+        .populate('assignedTo', 'name')
+        .populate('defaultTechnician', 'name');
 
     if (equipment) {
         // Smart Button Logic: Count open requests

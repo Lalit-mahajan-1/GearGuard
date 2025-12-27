@@ -3,57 +3,9 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-const palette = (i) => `hsl(${(i * 53) % 360}deg 70% 55%)`;
-
-const BarChart = ({ data }) => {
-  if (!data?.length) return <p className="text-sm text-muted-foreground">No data</p>;
-  const max = Math.max(...data.map(d => d.hours));
-  return (
-    <div className="space-y-3">
-      {data.map((d, i) => (
-        <div key={d.technicianId}>
-          <div className="flex justify-between text-sm">
-            <span>{d.name}</span>
-            <span className="text-muted-foreground">{d.hours}h</span>
-          </div>
-          <div className="h-2 bg-muted rounded">
-            <div
-              className="h-2 rounded"
-              style={{ width: `${Math.max(5, (d.hours / max) * 100)}%`, backgroundColor: palette(i) }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-const PieChart = ({ data }) => {
-  if (!data?.length) return <p className="text-sm text-muted-foreground">No data</p>;
-  const total = data.reduce((s, d) => s + (d.hours || 0), 0);
-  let offset = 0;
-  return (
-    <svg viewBox="0 0 42 42" className="w-40 h-40">
-      <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="hsl(var(--muted))" strokeWidth="6" />
-      {data.map((d, i) => {
-        const pct = total ? (d.hours / total) * 100 : 0;
-        const dash = `${pct} ${100 - pct}`;
-        const rotate = (offset / 100) * 360;
-        offset += pct;
-        return (
-          <circle
-            key={d.technicianId}
-            cx="21" cy="21" r="15.915" fill="transparent"
-            stroke={palette(i)} strokeWidth="6"
-            strokeDasharray={dash}
-            transform={`rotate(${rotate} 21 21)`}
-          />
-        );
-      })}
-    </svg>
-  );
-};
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
 const AnalyticsDashboard = () => {
   const { user } = useAuth();
@@ -84,7 +36,6 @@ const AnalyticsDashboard = () => {
       const { data } = await axios.get(url);
       setSummary(data);
     } catch {
-      // Fallback: compute locally from hoursData
       const totalHours = hoursData.reduce((s, d) => s + (d.hours || 0), 0);
       setSummary({ totalRequests: 0, totalHours, avgHours: 0 });
     }
@@ -114,13 +65,13 @@ const AnalyticsDashboard = () => {
   }, [teams, filters.team, isManager]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Analytics</h1>
+    <div className="space-y-6 pb-10">
+      <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
 
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle className="text-lg font-medium">Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-4 gap-4">
@@ -128,7 +79,7 @@ const AnalyticsDashboard = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Team</label>
                 <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={filters.team}
                   onChange={(e) => setFilters(f => ({ ...f, team: e.target.value, technician: '' }))}
                 >
@@ -141,7 +92,7 @@ const AnalyticsDashboard = () => {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Technician</label>
                 <select
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={filters.technician}
                   onChange={(e) => setFilters(f => ({ ...f, technician: e.target.value }))}
                 >
@@ -165,54 +116,88 @@ const AnalyticsDashboard = () => {
       {/* Metric Cards */}
       <div className="grid md:grid-cols-3 gap-4">
         <Card>
-          <CardHeader><CardTitle>Total Requests Completed</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Requests Completed</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{summary.totalRequests}</div>
+            <div className="text-2xl font-bold">{summary.totalRequests}</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Total Hours Logged</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Total Hours Logged</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{summary.totalHours}h</div>
+            <div className="text-2xl font-bold">{summary.totalHours.toFixed(1)}h</div>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Average Hours per Request</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Avg Hours / Request</CardTitle></CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">{summary.avgHours.toFixed(1)}h</div>
+            <div className="text-2xl font-bold">{summary.avgHours.toFixed(1)}h</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Bar Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Hours Worked per Technician</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <BarChart data={hoursData} />
-        </CardContent>
-      </Card>
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Bar Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Hours Worked per Technician</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            {hoursData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={hoursData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" width={80} style={{ fontSize: '12px' }} />
+                  <Tooltip cursor={{ fill: 'transparent' }} />
+                  <Legend />
+                  <Bar dataKey="hours" fill="#8884d8" name="Hours Worked" radius={[0, 4, 4, 0]}>
+                    {hoursData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">No data available</div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Pie Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Work Distribution</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6">
-            <PieChart data={hoursData} />
-            <div className="space-y-2">
-              {hoursData.map((d, i) => (
-                <div key={d.technicianId} className="flex items-center gap-2 text-sm">
-                  <span className="inline-block h-3 w-3 rounded" style={{ backgroundColor: palette(i) }} />
-                  <span className="truncate max-w-[200px]">{d.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        {/* Pie Chart */}
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Work Distribution</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            {hoursData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={hoursData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="hours"
+                    nameKey="name"
+                    label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                  >
+                    {hoursData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">No data available</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
