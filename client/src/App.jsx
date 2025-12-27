@@ -30,10 +30,15 @@ function App() {
                   <Route path="/profile" element={<Profile />} />
 
                   {/* Technician, Manager, Admin can view Equipment/Requests */}
+                  {/* Everyone (Technician included) can view Equipment */}
                   <Route element={<RoleRoute allowedRoles={['Admin', 'Manager', 'Technician']} />}>
                     <Route path="/equipment" element={<EquipmentList />} />
-                    <Route path="/equipment/create" element={<CreateEquipment />} />
                     <Route path="/equipment/:id" element={<EquipmentDetail />} />
+                  </Route>
+
+                  {/* Only Admin & Manager can view Requests and Create Equipment */}
+                  <Route element={<RoleRoute allowedRoles={['Admin', 'Manager']} />}>
+                    <Route path="/equipment/create" element={<CreateEquipment />} />
                     <Route path="/requests" element={<RequestKanban />} />
                     <Route path="/requests/create" element={<CreateRequest />} />
                     <Route path="/maintenance-calendar" element={<MaintenanceCalendar />} />
