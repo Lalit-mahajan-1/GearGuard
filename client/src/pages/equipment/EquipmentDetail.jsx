@@ -4,110 +4,247 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Wrench, ClipboardList, User } from 'lucide-react';
+import { Wrench, ClipboardList, User, MapPin, Calendar, Shield, Zap, Users } from 'lucide-react';
 import { format } from 'date-fns';
 
 const EquipmentDetail = () => {
     const { id } = useParams();
     const [equipment, setEquipment] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        axios.get(`http://localhost:5000/api/equipment/${id}`).then(res => setEquipment(res.data));
+        axios.get(`http://localhost:5000/api/equipment/${id}`).then(res => {
+            setEquipment(res.data);
+            setLoading(false);
+        }).catch(err => {
+            console.error('Failed to load equipment:', err);
+            setLoading(false);
+        });
     }, [id]);
 
-    if (!equipment) return <div>Loading...</div>;
-
-    return (
-        <div className="space-y-6">
-            {/* Top Stats / Smart Buttons */}
-            <div className="flex justify-end space-x-4">
-                <Link to={`/requests?equipment=${id}`}>
-                    <Button variant="outline" className="h-16 flex flex-col items-center justify-center min-w-[120px]">
-                        <ClipboardList className="h-5 w-5 mb-1" />
-                        <span className="font-bold text-lg">{equipment.openRequestsCount || 0}</span>
-                        <span className="text-xs text-muted-foreground">Maintenance</span>
-                    </Button>
-                </Link>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Equipment Info</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                                <span className="font-semibold text-muted-foreground">Namr</span>
-                                <p>{equipment.name}</p>
-                            </div>
-                            <div>
-                                <span className="font-semibold text-muted-foreground">Serial Number</span>
-                                <p>{equipment.serialNumber}</p>
-                            </div>
-                            <div>
-                                <span className="font-semibold text-muted-foreground">Status</span>
-                                <div><Badge>{equipment.status}</Badge></div>
-                            </div>
-                            <div>
-                                <span className="font-semibold text-muted-foreground">Category</span>
-                                <p>{equipment.category || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <span className="font-semibold text-muted-foreground">Purchase Date</span>
-                                <p>{equipment.purchaseDate ? format(new Date(equipment.purchaseDate), 'PPP') : 'N/A'}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Assignment & Team</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center space-x-4">
-                            <div className="bg-primary/10 p-3 rounded-full">
-                                <UsersIcon className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                                <p className="font-medium">Assigned Team</p>
-                                <p className="text-sm text-muted-foreground">{equipment.maintenanceTeam?.name || 'None'}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                            <div className="bg-primary/10 p-3 rounded-full">
-                                <User className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                                <p className="font-medium">Assigned To</p>
-                                <p className="text-sm text-muted-foreground">{equipment.assignedTo?.name || 'Unassigned'}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+    if (loading) return (
+        <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'rgb(42, 112, 255)' }}></div>
+                <p className="mt-4" style={{ color: 'rgb(90, 94, 105)' }}>Loading equipment...</p>
             </div>
         </div>
     );
-};
+    
+    if (!equipment) return (
+        <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+                <p style={{ color: 'rgb(230, 74, 74)' }} className="font-semibold">Equipment not found</p>
+            </div>
+        </div>
+    );
 
-const UsersIcon = ({ className }) => (
-    <svg
-        className={className}
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-        <circle cx="9" cy="7" r="4" />
-        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-)
+    const getStatusColor = (status) => {
+        const colors = {
+            'Operational': { bg: 'rgb(230, 248, 240)', text: 'rgb(62, 185, 122)' },
+            'Down': { bg: 'rgb(254, 230, 230)', text: 'rgb(230, 74, 74)' },
+            'Under Maintenance': { bg: 'rgb(255, 243, 230)', text: 'rgb(255, 161, 46)' },
+            'Scrapped': { bg: 'rgb(245, 246, 249)', text: 'rgb(90, 94, 105)' }
+        };
+        return colors[status] || colors['Operational'];
+    };
+
+    const isWarrantyActive = equipment.warrantyExpiration && new Date(equipment.warrantyExpiration) > new Date();
+
+    const statusColor = getStatusColor(equipment.status);
+
+    return (
+        <div className="space-y-6 pb-8">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold" style={{ color: 'rgb(30, 33, 40)' }}>{equipment.name}</h1>
+                    <p style={{ color: 'rgb(130, 134, 145)' }} className="text-sm mt-1">{equipment.description || 'No description available'}</p>
+                </div>
+                <div className="flex gap-2">
+                    <Link to={`/requests?equipment=${id}`}>
+                        <Button className="flex items-center gap-2" style={{
+                            backgroundColor: 'rgb(42, 112, 255)',
+                            color: 'white'
+                        }}>
+                            <ClipboardList className="h-4 w-4" />
+                            View Requests ({equipment.openRequestsCount || 0})
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3">
+                {/* Basic Info Card */}
+                <Card style={{
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    border: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                }}>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2" style={{ color: 'rgb(30, 33, 40)' }}>
+                            <Wrench className="h-4 w-4" style={{ color: 'rgb(42, 112, 255)' }} />
+                            Basic Information
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Serial Number</span>
+                            <p style={{ color: 'rgb(30, 33, 40)' }} className="font-mono text-sm">{equipment.serialNumber}</p>
+                        </div>
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Category</span>
+                            <p style={{ color: 'rgb(30, 33, 40)' }}>{equipment.category || 'Not specified'}</p>
+                        </div>
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Status</span>
+                            <Badge style={{
+                                backgroundColor: statusColor.bg,
+                                color: statusColor.text,
+                                border: 'none'
+                            }}>
+                                {equipment.status}
+                            </Badge>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Location & Dates Card */}
+                <Card style={{
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    border: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                }}>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2" style={{ color: 'rgb(30, 33, 40)' }}>
+                            <MapPin className="h-4 w-4" style={{ color: 'rgb(42, 112, 255)' }} />
+                            Location & Timeline
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Location</span>
+                            <p style={{ color: 'rgb(30, 33, 40)' }}>{equipment.location}</p>
+                        </div>
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Purchase Date</span>
+                            <p style={{ color: 'rgb(30, 33, 40)' }}>
+                                {equipment.purchaseDate ? format(new Date(equipment.purchaseDate), 'MMM dd, yyyy') : 'Not recorded'}
+                            </p>
+                        </div>
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Added Date</span>
+                            <p style={{ color: 'rgb(30, 33, 40)' }}>
+                                {equipment.createdAt ? format(new Date(equipment.createdAt), 'MMM dd, yyyy') : 'N/A'}
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Warranty Card */}
+                <Card style={{
+                    backgroundColor: 'rgb(255, 255, 255)',
+                    border: 'none',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                }}>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2" style={{ color: 'rgb(30, 33, 40)' }}>
+                            <Shield className="h-4 w-4" style={{ color: 'rgb(42, 112, 255)' }} />
+                            Warranty Status
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Warranty Expiration</span>
+                            <p style={{ color: 'rgb(30, 33, 40)' }}>
+                                {equipment.warrantyExpiration 
+                                    ? format(new Date(equipment.warrantyExpiration), 'MMM dd, yyyy')
+                                    : 'No warranty info'
+                                }
+                            </p>
+                        </div>
+                        <div>
+                            <span className="text-xs font-semibold block mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Warranty Status</span>
+                            {equipment.warrantyExpiration ? (
+                                <Badge style={{
+                                    backgroundColor: isWarrantyActive ? 'rgb(230, 248, 240)' : 'rgb(254, 230, 230)',
+                                    color: isWarrantyActive ? 'rgb(62, 185, 122)' : 'rgb(230, 74, 74)',
+                                    border: 'none'
+                                }}>
+                                    {isWarrantyActive ? '✓ Active' : '✗ Expired'}
+                                </Badge>
+                            ) : (
+                                <Badge style={{
+                                    backgroundColor: 'rgb(245, 246, 249)',
+                                    color: 'rgb(90, 94, 105)',
+                                    border: 'none'
+                                }}>
+                                    Unknown
+                                </Badge>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Assignment & Team Card */}
+            <Card style={{
+                backgroundColor: 'rgb(255, 255, 255)',
+                border: 'none',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+            }}>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2" style={{ color: 'rgb(30, 33, 40)' }}>
+                        <Users className="h-4 w-4" style={{ color: 'rgb(42, 112, 255)' }} />
+                        Team & Assignment
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <div className="flex items-start space-x-4">
+                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
+                                <Users className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Assigned Team</p>
+                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.maintenanceTeam?.name || 'No team assigned'}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start space-x-4">
+                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
+                                <User className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Primary Technician</p>
+                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.defaultTechnician?.name || 'Not assigned'}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start space-x-4">
+                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
+                                <Zap className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Assigned Manager</p>
+                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.assignedTo?.name || 'Unassigned'}</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-start space-x-4">
+                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'rgb(245, 246, 249)' }}>
+                                <Calendar className="h-5 w-5" style={{ color: 'rgb(42, 112, 255)' }} />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-xs font-semibold mb-1" style={{ color: 'rgb(90, 94, 105)' }}>Department</p>
+                                <p style={{ color: 'rgb(30, 33, 40)' }} className="font-medium">{equipment.assignedDepartment || 'Not specified'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
 
 export default EquipmentDetail;
