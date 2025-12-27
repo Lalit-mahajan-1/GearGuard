@@ -56,15 +56,19 @@ export const Layout = ({ children }) => {
                 </nav>
 
                 <div className="p-4 border-t">
-                    <div className="flex items-center space-x-3 mb-4 px-2">
-                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                            {user?.name?.[0] || 'U'}
+                    <Link to="/profile" className="flex items-center space-x-3 mb-4 px-2 hover:bg-accent rounded-md p-2 transition-colors">
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold overflow-hidden">
+                            {user?.avatar && !user.avatar.includes('default') ? (
+                                <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+                            ) : (
+                                <span>{user?.name?.[0] || 'U'}</span>
+                            )}
                         </div>
                         <div className="flex-1 overflow-hidden">
                             <p className="text-sm font-medium truncate">{user?.name}</p>
                             <p className="text-xs text-muted-foreground truncate">{user?.role}</p>
                         </div>
-                    </div>
+                    </Link>
                     <Button variant="ghost" className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10" onClick={logout}>
                         <LogOut className="h-4 w-4 mr-2" />
                         Logout

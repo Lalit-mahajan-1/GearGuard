@@ -7,12 +7,13 @@ import {
     deleteEquipment
 } from '../controllers/equipment.controller.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
+import upload from '../middlewares/uploadMiddleware.js';
 
 const router = express.Router();
 
 router.route('/')
     .get(protect, getEquipment)
-    .post(protect, authorize('Admin', 'Manager'), createEquipment);
+    .post(protect, authorize('Admin', 'Manager'), upload.single('image'), createEquipment);
 
 router.route('/:id')
     .get(protect, getEquipmentById)

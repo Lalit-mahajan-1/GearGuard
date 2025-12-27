@@ -37,7 +37,40 @@ export const getEquipmentById = async (req, res) => {
 // @route   POST /api/equipment
 // @access  Private/Admin/Manager
 export const createEquipment = async (req, res) => {
-    const equipment = await Equipment.create(req.body);
+    let imagePath = '';
+    if (req.file) {
+        imagePath = `http://localhost:${process.env.PORT}/uploads/${req.file.filename}`;
+    }
+
+    const {
+        name,
+        serialNumber,
+        location,
+        purchaseDate,
+        warrantyExpiration,
+        status,
+        assignedDepartment,
+        assignedTo,
+        maintenanceTeam,
+        defaultTechnician,
+        category
+    } = req.body;
+
+    const equipment = await Equipment.create({
+        name,
+        serialNumber,
+        location,
+        purchaseDate,
+        warrantyExpiration,
+        status,
+        assignedDepartment,
+        assignedTo,
+        maintenanceTeam,
+        defaultTechnician,
+        category,
+        image: imagePath
+    });
+
     res.status(201).json(equipment);
 };
 

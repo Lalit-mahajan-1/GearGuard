@@ -8,9 +8,11 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/dashboard/Dashboard';
 import EquipmentList from './pages/equipment/EquipmentList';
 import EquipmentDetail from './pages/equipment/EquipmentDetail';
+import CreateEquipment from './pages/equipment/CreateEquipment';
 import RequestKanban from './pages/requests/RequestKanban';
 import CreateRequest from './pages/requests/CreateRequest';
 import TeamsList from './pages/teams/TeamsList';
+import Profile from './pages/profile/Profile';
 
 function App() {
   return (
@@ -24,10 +26,12 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Navigate to="/dashboard" />} />
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/profile" element={<Profile />} />
 
                   {/* Technician, Manager, Admin can view Equipment/Requests */}
                   <Route element={<RoleRoute allowedRoles={['Admin', 'Manager', 'Technician']} />}>
                     <Route path="/equipment" element={<EquipmentList />} />
+                    <Route path="/equipment/create" element={<CreateEquipment />} />
                     <Route path="/equipment/:id" element={<EquipmentDetail />} />
                     <Route path="/requests" element={<RequestKanban />} />
                     <Route path="/requests/create" element={<CreateRequest />} />
