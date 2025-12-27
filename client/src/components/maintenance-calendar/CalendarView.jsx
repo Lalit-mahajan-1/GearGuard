@@ -3,14 +3,19 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../ui/button';
 
 const CalendarView = ({ selectedDate, onDateSelect, scheduledDates = [] }) => {
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    // Initialize with UTC date
+    const [currentMonth, setCurrentMonth] = useState(
+        new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1))
+    );
 
     const daysInMonth = (date) => {
-        return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        // Get days in month using UTC
+        return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
     };
 
     const firstDayOfMonth = (date) => {
-        return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        // Get first day of month using UTC
+        return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)).getUTCDay();
     };
 
     const hasScheduledDate = (day) => {
@@ -23,37 +28,58 @@ const CalendarView = ({ selectedDate, onDateSelect, scheduledDates = [] }) => {
     };
 
     const isSelected = (day) => {
-        // Check if this day is in the current month being viewed
         if (day === null) return false;
         
-        const dayInCurrentMonth = new Date(Date.UTC(
-            currentMonth.getUTCFullYear(),
-            currentMonth.getUTCMonth(),
-            day
-        ));
+        // Get the selected date's month and year
+        const selectedYear = selectedDate.getUTCFullYear();
+        const selectedMonth = selectedDate.getUTCMonth();
+        const selectedDay = selectedDate.getUTCDate();
         
-        const selectedDateOnly = new Date(Date.UTC(
-            selectedDate.getUTCFullYear(),
-            selectedDate.getUTCMonth(),
-            selectedDate.getUTCDate()
-        ));
+        // Get the current viewing month's year
+        const currentYear = currentMonth.getUTCFullYear();
+        const currentMonthNum = currentMonth.getUTCMonth();
         
-        return dayInCurrentMonth.getTime() === selectedDateOnly.getTime();
+        // Only highlight if it's the same month AND same day
+        return currentYear === selectedYear && 
+               currentMonthNum === selectedMonth && 
+               day === selectedDay;
     };
 
     const isToday = (day) => {
+        if (day === null) return false;
+        
         const today = new Date();
-        return day === today.getUTCDate() &&
-               currentMonth.getUTCMonth() === today.getUTCMonth() &&
-               currentMonth.getUTCFullYear() === today.getUTCFullYear();
+        const todayYear = today.getUTCFullYear();
+        const todayMonth = today.getUTCMonth();
+        const todayDay = today.getUTCDate();
+        
+        const currentYear = currentMonth.getUTCFullYear();
+        const currentMonthNum = currentMonth.getUTCMonth();
+        
+        // Only mark as today if it's the same month AND same day AND same year
+        return currentYear === todayYear && 
+               currentMonthNum === todayMonth && 
+               day === todayDay;
     };
 
     const handlePrevMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+        // Create a new UTC date for the previous month
+        const newMonth = new Date(Date.UTC(
+            currentMonth.getUTCFullYear(),
+            currentMonth.getUTCMonth() - 1,
+            1
+        ));
+        setCurrentMonth(newMonth);
     };
 
     const handleNextMonth = () => {
-        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+        // Create a new UTC date for the next month
+        const newMonth = new Date(Date.UTC(
+            currentMonth.getUTCFullYear(),
+            currentMonth.getUTCMonth() + 1,
+            1
+        ));
+        setCurrentMonth(newMonth);
     };
 
     const handleSelectDate = (day) => {
@@ -61,7 +87,8 @@ const CalendarView = ({ selectedDate, onDateSelect, scheduledDates = [] }) => {
         onDateSelect(newDate);
     };
 
-    const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+    const monthName = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth(), 1))
+        .toLocaleString('default', { month: 'long', year: 'numeric' });
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const totalDays = daysInMonth(currentMonth);
     const firstDay = firstDayOfMonth(currentMonth);
