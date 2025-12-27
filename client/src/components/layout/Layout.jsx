@@ -24,7 +24,16 @@ export const Layout = ({ children }) => {
         { name: 'Maintenance', path: '/maintenance-calendar', icon: Calendar, roles: ['Admin', 'Manager', 'Technician'] },
     ];
 
-    const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role));
+    const filteredNavItems = navItems.filter(item => {
+        // Apply role-based filtering first
+        if (!item.roles.includes(user?.role)) {
+            return false;
+        }
+        // Additional filtering for specific items based on user role
+        if (item.name === 'Requests' && !['Admin', 'Manager'].includes(user?.role)) return false;
+        if (item.name === 'Teams' && !['Admin', 'Manager'].includes(user?.role)) return false;
+        return true;
+    });
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
