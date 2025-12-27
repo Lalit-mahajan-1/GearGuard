@@ -16,11 +16,13 @@ export const Layout = ({ children }) => {
     const location = useLocation();
 
     const navItems = [
-        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { name: 'Equipment', path: '/equipment', icon: Wrench },
-        { name: 'Teams', path: '/teams', icon: Users },
-        { name: 'Requests', path: '/requests', icon: ClipboardList },
+        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['Admin', 'Manager', 'Technician', 'User'] },
+        { name: 'Equipment', path: '/equipment', icon: Wrench, roles: ['Admin', 'Manager', 'Technician'] },
+        { name: 'Teams', path: '/teams', icon: Users, roles: ['Admin', 'Manager'] },
+        { name: 'Requests', path: '/requests', icon: ClipboardList, roles: ['Admin', 'Manager', 'Technician'] },
     ];
+
+    const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role));
 
     return (
         <div className="flex h-screen bg-gray-100 overflow-hidden">
@@ -32,7 +34,7 @@ export const Layout = ({ children }) => {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = location.pathname.startsWith(item.path);
                         return (

@@ -22,6 +22,7 @@ app.use(morgan('dev'));
 
 // Routes
 import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
 import equipmentRoutes from './routes/equipment.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import requestRoutes from './routes/request.routes.js';
@@ -31,6 +32,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/requests', requestRoutes);
