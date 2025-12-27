@@ -176,16 +176,17 @@ export const updateRequest = async (req, res) => {
         }
     }
 
-    // Manager assignment validation: technician must belong to request's team
+    // Manager assignment: Allow assigning any technician, auto-update team if needed
     if (req.body.assignedTechnician) {
         const tech = await (await import('../models/user.model.js')).default.findById(req.body.assignedTechnician);
         if (!tech) {
             res.status(404);
             throw new Error('Technician not found');
         }
+        
+        // If tech is in a different team, update the request's team to match
         if (String(tech.team) !== String(request.assignedTeam)) {
-            res.status(400);
-            throw new Error('Technician must belong to the assigned team');
+            req.body.assignedTeam = tech.team;
         }
     }
 

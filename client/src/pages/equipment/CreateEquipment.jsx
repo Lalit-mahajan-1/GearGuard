@@ -54,9 +54,7 @@ const CreateEquipment = () => {
             // Actually, let's just stick to JSON for data and file upload later? 
             // No, user wants image. I will implement assumes backend update in next step.
 
-            await axios.post('http://localhost:5000/api/equipment', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+            await axios.post('http://localhost:5000/api/equipment', formData);
             navigate('/equipment');
         } catch (error) {
             console.error(error);
