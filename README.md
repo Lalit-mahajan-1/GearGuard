@@ -59,4 +59,4 @@ npm run dev     # Starts client on port 5173
 4. **Equipment**: Go to "Equipment" -> Select an item. Click the "Maintenance Requests" smart button to see history.
 
 
-
+demo video link - https://drive.google.com/drive/folders/1vbYEU9KR8xOeBOmJW9eK9epW0JhhFomf
