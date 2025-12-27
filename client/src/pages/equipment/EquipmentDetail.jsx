@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Wrench, ClipboardList, User, MapPin, Calendar, Shield, Zap, Users } from 'lucide-react';
 import { format } from 'date-fns';
+import EquipmentMaintenanceList from '../../components/maintenance-calendar/EquipmentMaintenanceList';
 
 const EquipmentDetail = () => {
     const { id } = useParams();
@@ -13,6 +14,7 @@ const EquipmentDetail = () => {
     const [loading, setLoading] = useState(true);
     const [technicians, setTechnicians] = useState([]);
     const [updating, setUpdating] = useState(false);
+    const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -99,6 +101,14 @@ const EquipmentDetail = () => {
 
     return (
         <div className="space-y-6 pb-8">
+            {showMaintenanceModal && (
+                <EquipmentMaintenanceList
+                    equipmentId={id}
+                    equipmentName={equipment.name}
+                    onClose={() => setShowMaintenanceModal(false)}
+                />
+            )}
+
             {/* Header */}
             <div className="flex items-start justify-between">
                 <div>
@@ -106,6 +116,21 @@ const EquipmentDetail = () => {
                     <p style={{ color: 'rgb(130, 134, 145)' }} className="text-sm mt-1">{equipment.description || 'No description available'}</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowMaintenanceModal(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all"
+                        style={{
+                            backgroundColor: 'rgb(42, 112, 255)',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                        onMouseLeave={(e) => e.target.style.opacity = '1'}
+                    >
+                        <Wrench className="h-4 w-4" />
+                        View Maintenance
+                    </button>
                     <Link to={`/requests?equipment=${id}`}>
                         <Button className="flex items-center gap-2" style={{
                             backgroundColor: 'rgb(42, 112, 255)',
