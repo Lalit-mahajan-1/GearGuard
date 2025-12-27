@@ -5,6 +5,7 @@ import {
     Wrench,
     Users,
     ClipboardList,
+    Calendar,
     LogOut,
     Menu
 } from 'lucide-react';
@@ -20,6 +21,7 @@ export const Layout = ({ children }) => {
         { name: 'Equipment', path: '/equipment', icon: Wrench, roles: ['Admin', 'Manager', 'Technician'] },
         { name: 'Teams', path: '/teams', icon: Users, roles: ['Admin', 'Manager'] },
         { name: 'Requests', path: '/requests', icon: ClipboardList, roles: ['Admin', 'Manager', 'Technician'] },
+        { name: 'Maintenance', path: '/maintenance-calendar', icon: Calendar, roles: ['Admin', 'Manager', 'Technician'] },
     ];
 
     const filteredNavItems = navItems.filter(item => item.roles.includes(user?.role));

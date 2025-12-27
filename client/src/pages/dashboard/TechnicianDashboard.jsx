@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Calendar } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Link } from 'react-router-dom';
 import KanbanBoard from '../../components/kanban/KanbanBoard';
 
 const TechnicianDashboard = () => {
@@ -56,7 +58,21 @@ const TechnicianDashboard = () => {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-3xl font-bold">My Workbench</h1>
+            <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold">My Workbench</h1>
+                <Link to="/maintenance-calendar">
+                    <Button
+                        className="flex items-center gap-2"
+                        style={{
+                            backgroundColor: 'rgb(42, 112, 255)',
+                            color: 'white'
+                        }}
+                    >
+                        <Calendar className="h-4 w-4" />
+                        View Calendar
+                    </Button>
+                </Link>
+            </div>
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center">

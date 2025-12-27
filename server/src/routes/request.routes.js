@@ -2,6 +2,7 @@ import express from 'express';
 import {
     getRequests,
     getRequestById,
+    getScheduledRequests,
     createRequest,
     updateRequest,
     deleteRequest,
@@ -14,6 +15,9 @@ const router = express.Router();
 router.route('/')
     .get(protect, getRequests)
     .post(protect, createRequest);
+
+router.route('/calendar/scheduled')
+    .get(protect, getScheduledRequests);
 
 router.route('/:id')
     .get(protect, getRequestById)

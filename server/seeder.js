@@ -108,7 +108,7 @@ const importData = async () => {
 
         console.log('Equipment Imported...'.green.inverse);
 
-        // Create Requests
+        // Create Requests with dates
         await MaintenanceRequest.create({
             subject: 'Belt slipping',
             description: 'The conveyor belt is slipping under heavy load.',
@@ -117,7 +117,11 @@ const importData = async () => {
             assignedTechnician: tech1._id,
             requestedBy: managerUser._id,
             priority: 'High',
-            status: 'New'
+            status: 'Repaired',
+            scheduledDate: new Date(2025, 11, 28),
+            startDate: new Date(2025, 11, 27, 10),
+            completionDate: new Date(2025, 11, 27, 14),
+            duration: 4
         });
 
          await MaintenanceRequest.create({
@@ -128,7 +132,10 @@ const importData = async () => {
             assignedTechnician: tech1._id,
             requestedBy: managerUser._id,
             priority: 'Normal',
-            status: 'In Progress'
+            status: 'In Progress',
+            scheduledDate: new Date(2025, 11, 30),
+            startDate: new Date(2025, 11, 28, 9),
+            duration: 6
         });
 
          await MaintenanceRequest.create({
@@ -139,7 +146,9 @@ const importData = async () => {
             assignedTechnician: tech2._id,
             requestedBy: managerUser._id,
             priority: 'Critical',
-            status: 'New'
+            status: 'New',
+            scheduledDate: new Date(2025, 11, 29),
+            duration: 2
         });
 
         console.log('Requests Imported...'.green.inverse);

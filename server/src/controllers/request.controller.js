@@ -46,6 +46,28 @@ export const getRequestById = async (req, res) => {
     }
 };
 
+// @desc    Get scheduled maintenance requests for calendar view
+// @route   GET /api/requests/calendar/scheduled
+// @access  Private
+export const getScheduledRequests = async (req, res) => {
+    const { role, userId } = req.query;
+    const query = { scheduledDate: { $exists: true, $ne: null } };
+
+    // Filter based on user role
+    if (role === 'Technician' && userId) {
+        query.assignedTechnician = userId;
+    }
+
+    const requests = await MaintenanceRequest.find(query)
+        .populate('equipment', 'name serialNumber')
+        .populate('assignedTeam', 'name')
+        .populate('assignedTechnician', 'name avatar')
+        .populate('requestedBy', 'name')
+        .sort({ scheduledDate: 1 });
+
+    res.json(requests);
+};
+
 // @desc    Create new request
 // @route   POST /api/requests
 // @access  Private

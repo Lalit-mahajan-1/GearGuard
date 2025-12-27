@@ -13,6 +13,7 @@ import RequestKanban from './pages/requests/RequestKanban';
 import CreateRequest from './pages/requests/CreateRequest';
 import TeamsList from './pages/teams/TeamsList';
 import Profile from './pages/profile/Profile';
+import MaintenanceCalendar from './pages/maintenance-calendar/MaintenanceCalendar';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
                     <Route path="/equipment/:id" element={<EquipmentDetail />} />
                     <Route path="/requests" element={<RequestKanban />} />
                     <Route path="/requests/create" element={<CreateRequest />} />
+                    <Route path="/maintenance-calendar" element={<MaintenanceCalendar />} />
                   </Route>
 
                   {/* Only Managers and Admins can view Teams */}
