@@ -14,6 +14,7 @@ import CreateRequest from './pages/requests/CreateRequest';
 import TeamsList from './pages/teams/TeamsList';
 import Profile from './pages/profile/Profile';
 import MaintenanceCalendar from './pages/maintenance-calendar/MaintenanceCalendar';
+import AnalyticsDashboard from './pages/analytics/AnalyticsDashboard';
 
 function App() {
   return (
@@ -35,6 +36,10 @@ function App() {
                     <Route path="/equipment" element={<EquipmentList />} />
                     <Route path="/equipment/:id" element={<EquipmentDetail />} />
                     <Route path="/maintenance-calendar" element={<MaintenanceCalendar />} />
+                    {/* Analytics for Manager & Technician */}
+                    <Route element={<RoleRoute allowedRoles={['Manager', 'Technician']} />}>
+                      <Route path="/analytics" element={<AnalyticsDashboard />} />
+                    </Route>
                   </Route>
 
                   {/* Only Admin & Manager can view Requests and Create Equipment */}

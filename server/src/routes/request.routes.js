@@ -7,7 +7,8 @@ import {
     updateRequest,
     deleteRequest,
     addNote,
-    getHoursWorkedByTechnician
+    getHoursWorkedByTechnician,
+    getAnalyticsSummary
 } from '../controllers/request.controller.js';
 import { protect, authorize } from '../middlewares/authMiddleware.js';
 
@@ -31,5 +32,9 @@ router.route('/:id/notes')
 // Analytics: hours per technician (Repaired)
 router.route('/analytics/hours')
     .get(protect, authorize('Admin', 'Manager', 'Technician'), getHoursWorkedByTechnician);
+
+// Analytics: summary totals
+router.route('/analytics/summary')
+    .get(protect, authorize('Admin', 'Manager', 'Technician'), getAnalyticsSummary);
 
 export default router;

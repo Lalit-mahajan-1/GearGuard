@@ -1,5 +1,6 @@
 import MaintenanceRequest from '../models/maintenanceRequest.model.js';
 import Equipment from '../models/equipment.model.js';
+import mongoose from 'mongoose';
 
 // @desc    Get all requests (Supports filtering)
 // @route   GET /api/requests
@@ -207,7 +208,17 @@ export const getHoursWorkedByTechnician = async (req, res) => {
     }
     // Optional team filter for managers
     if (req.user?.role !== 'Technician' && req.query.team) {
-        match.assignedTeam = req.query.team;
+        try { match.assignedTeam = new mongoose.Types.ObjectId(req.query.team); } catch {}
+    }
+    // Optional technician filter (manager)
+    if (req.user?.role !== 'Technician' && req.query.technician) {
+        try { match.assignedTechnician = new mongoose.Types.ObjectId(req.query.technician); } catch {}
+    }
+    // Optional date range filter based on completionDate
+    if (req.query.start || req.query.end) {
+        match.completionDate = {};
+        if (req.query.start) match.completionDate.$gte = new Date(req.query.start);
+        if (req.query.end) match.completionDate.$lte = new Date(req.query.end);
     }
 
     const results = await MaintenanceRequest.aggregate([
@@ -220,6 +231,42 @@ export const getHoursWorkedByTechnician = async (req, res) => {
     ]);
 
     res.json(results);
+};
+
+// @desc    Summary analytics: totals for repaired requests
+// @route   GET /api/requests/analytics/summary
+// @access  Private
+export const getAnalyticsSummary = async (req, res) => {
+    const match = { status: 'Repaired' };
+    if (req.user?.role === 'Technician') {
+        match.assignedTeam = req.user.team;
+    }
+    if (req.user?.role !== 'Technician' && req.query.team) {
+        try { match.assignedTeam = new mongoose.Types.ObjectId(req.query.team); } catch {}
+    }
+    if (req.user?.role !== 'Technician' && req.query.technician) {
+        try { match.assignedTechnician = new mongoose.Types.ObjectId(req.query.technician); } catch {}
+    }
+    if (req.query.start || req.query.end) {
+        match.completionDate = {};
+        if (req.query.start) match.completionDate.$gte = new Date(req.query.start);
+        if (req.query.end) match.completionDate.$lte = new Date(req.query.end);
+    }
+
+    const results = await MaintenanceRequest.aggregate([
+        { $match: match },
+        {
+            $group: {
+                _id: null,
+                totalRequests: { $sum: 1 },
+                totalHours: { $sum: { $ifNull: ['$duration', 0] } },
+                avgHours: { $avg: { $ifNull: ['$duration', 0] } }
+            }
+        }
+    ]);
+
+    const summary = results[0] || { totalRequests: 0, totalHours: 0, avgHours: 0 };
+    res.json(summary);
 };
 
 // @desc    Add note to request

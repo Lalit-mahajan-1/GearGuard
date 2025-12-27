@@ -54,14 +54,16 @@ export const deleteTeam = async (req, res) => {
 // @route   GET /api/teams/mine/members
 // @access  Private (Technician)
 export const getMyTeamMembers = async (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Not authorized' });
+    }
     if (req.user.role === 'Manager' || req.user.role === 'Admin') {
         // Managers/Admins can optionally pass team id to inspect, else return all members across teams
         const teamId = req.query.team;
         if (teamId) {
             const team = await MaintenanceTeam.findById(teamId).populate('members', 'name role avatar');
             if (!team) {
-                res.status(404);
-                throw new Error('Team not found');
+                return res.status(404).json({ message: 'Team not found' });
             }
             return res.json(team.members);
         }
@@ -74,5 +76,5 @@ export const getMyTeamMembers = async (req, res) => {
     // Technician: return members of their assigned team(s)
     const teams = await MaintenanceTeam.find({ members: req.user._id }).populate('members', 'name role avatar');
     const members = teams.length ? teams[0].members : [];
-    res.json(members);
+    return res.json(members);
 };

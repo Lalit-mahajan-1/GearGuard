@@ -6,6 +6,7 @@ import {
     Users,
     ClipboardList,
     Calendar,
+    BarChart3,
     LogOut,
     Menu
 } from 'lucide-react';
@@ -24,6 +25,8 @@ export const Layout = ({ children }) => {
         { name: 'Equipment', path: '/equipment', icon: Wrench, roles: ['Admin', 'Manager', 'Technician'] },
         { name: 'Teams', path: '/teams', icon: Users, roles: ['Admin', 'Manager'] },
         { name: 'Requests', path: '/requests', icon: ClipboardList, roles: ['Admin', 'Manager', 'Technician'] },
+        // Place Analytics right after Requests
+        { name: 'Analytics', path: '/analytics', icon: BarChart3, roles: ['Manager', 'Technician'] },
         { name: 'Maintenance', path: '/maintenance-calendar', icon: Calendar, roles: ['Admin', 'Manager', 'Technician'] },
     ];
 
@@ -34,6 +37,7 @@ export const Layout = ({ children }) => {
         }
         // Additional filtering for specific items based on user role
         if (item.name === 'Requests' && !['Admin', 'Manager'].includes(user?.role)) return false;
+        if (item.name === 'Analytics' && !['Manager', 'Technician'].includes(user?.role)) return false;
         if (item.name === 'Teams' && !['Admin', 'Manager'].includes(user?.role)) return false;
         return true;
     });
