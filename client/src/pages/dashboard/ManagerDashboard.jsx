@@ -540,21 +540,11 @@ const ManagerDashboard = () => {
     };
 
     const handleScrap = async (req) => {
-        // Optimistically update state immediately
-        setRequests((prev) =>
-            prev.map((r) => (r._id === req._id ? { ...r, status: "Scrapped" } : r))
-        );
+        setRequests((prev) => prev.map((r) => (r._id === req._id ? { ...r, status: "Scrapped" } : r)));
         try {
-            const response = await axios.put(`${API}/requests/${req._id}`, { status: "Scrapped" });
-            console.log("✓ Scrap API call succeeded:", response.data);
-            // No need to refresh if optimistic update succeeded
-        } catch (error) {
-            console.error("✗ Failed to scrap request:", {
-                status: error.response?.status,
-                message: error.response?.data?.message || error.message,
-                error: error.response?.data
-            });
-            // On error, refresh to get correct state
+            await axios.put(`${API}/requests/${req._id}`, { status: "Scrapped" });
+        } catch (e) {
+            console.error("Failed to scrap");
             await refreshRequests();
         }
     };

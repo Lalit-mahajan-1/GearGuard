@@ -170,6 +170,7 @@ export const updateRequest = async (req, res) => {
     // Normalize 'Scrap' to 'Scrapped'
     if (req.body.status === 'Scrap') req.body.status = 'Scrapped';
 
+<<<<<<< HEAD
     // Once scrapped, request becomes read-only for status changes
     if (request.status === 'Scrapped') {
         console.log(`[updateRequest] Request already scrapped, rejecting update`);
@@ -177,14 +178,18 @@ export const updateRequest = async (req, res) => {
     }
 
     // Manager-only: handle scrap; perform equipment + request updates safely
+=======
+    // Manager-only: handle scrap state changes
+>>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
     if (req.body.status === 'Scrapped' && request.status !== 'Scrapped') {
         console.log(`[updateRequest] Scrap attempt - User role: ${req.user?.role}`);
         if (req.user?.role !== 'Manager' && req.user?.role !== 'Admin') {
             console.log(`[updateRequest] Scrap denied - only Manager/Admin can scrap, user is: ${req.user?.role}`);
             return res.status(403).json({ message: 'Only Managers and Admins can mark a request as Scrapped' });
         }
-        const session = await mongoose.startSession();
+        
         try {
+<<<<<<< HEAD
             console.log(`[Scrap] Starting transaction for request ${request._id}`);
             session.startTransaction();
             
@@ -194,6 +199,10 @@ export const updateRequest = async (req, res) => {
                 await session.abortTransaction();
                 session.endSession();
                 console.log(`[Scrap] ✗ Equipment not found for ID: ${request.equipment}`);
+=======
+            const equipment = await Equipment.findById(request.equipment);
+            if (!equipment) {
+>>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
                 return res.status(404).json({ message: 'Linked equipment not found' });
             }
             
@@ -206,13 +215,18 @@ export const updateRequest = async (req, res) => {
             equipment.scrappedAt = new Date();
             equipment.scrapReason = scrapReason;
             equipment.scrappedBy = req.user._id;
+<<<<<<< HEAD
             
             await equipment.save();
             console.log(`[Scrap] ✓ Equipment ${equipment._id} saved successfully`);
+=======
+            await equipment.save();
+>>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
 
             console.log(`[Scrap] Updating request status to Scrapped...`);
             request.status = 'Scrapped';
             await request.save();
+<<<<<<< HEAD
             console.log(`[Scrap] ✓ Request ${request._id} saved successfully`);
 
             console.log(`[Scrap] ✓✓ Scrap operation completed successfully`);
@@ -238,8 +252,39 @@ export const updateRequest = async (req, res) => {
                     name: err?.name
                 }
             });
+=======
+
+            return res.json(request);
+        } catch (err) {
+            return res.status(500).json({ message: 'Failed to scrap equipment', error: err?.message });
+>>>>>>> 45eec21177ffc46f973728b43a670c0ad7dada93
         }
     }
+
+    // Handle UN-SCRAPPING or standard status changes
+    if (request.status === 'Scrapped' && req.body.status && req.body.status !== 'Scrapped') {
+        if (req.user?.role !== 'Manager') {
+             return res.status(403).json({ message: 'Only Managers can un-scrap a request' });
+        }
+        // Un-scrap logic
+        try {
+            const equipment = await Equipment.findById(request.equipment);
+             if (equipment) {
+                equipment.status = 'Under Maintenance'; // Safest state when un-scrapping
+                equipment.isScrapped = false;
+                equipment.scrappedAt = null;
+                equipment.scrapReason = null;
+                equipment.scrappedBy = null;
+                await equipment.save();
+            }
+            request.status = req.body.status;
+            await request.save();
+            return res.json(request);
+        } catch(err) {
+             return res.status(500).json({ message: 'Failed to un-scrap', error: err.message });
+        }
+    }
+
     if (req.body.status === 'Repaired' && request.status !== 'Repaired') {
         const equipment = await Equipment.findById(request.equipment);
         if (equipment) {
