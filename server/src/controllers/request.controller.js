@@ -234,6 +234,17 @@ export const updateRequest = async (req, res) => {
             equipment.defaultTechnician = req.body.assignedTechnician;
             await equipment.save();
         }
+
+        // NOTIFICATION: Notify Technician of assignment
+        if (String(req.body.assignedTechnician) !== String(request.assignedTechnician)) {
+             const Notification = (await import('../models/notification.model.js')).default;
+             await Notification.create({
+                 recipient: req.body.assignedTechnician,
+                 message: `You have been assigned a new request: ${request.subject}`,
+                 type: 'Assignment',
+                 relatedRequest: request._id
+             });
+        }
     }
 
     const updatedRequest = await MaintenanceRequest.findByIdAndUpdate(
@@ -241,6 +252,28 @@ export const updateRequest = async (req, res) => {
         req.body,
         { new: true, runValidators: true }
     );
+
+    // NOTIFICATION: Notify Manager of status update (by Technician)
+    if (req.user.role === 'Technician' && req.body.status && req.body.status !== request.status) {
+         // Find managers of the team
+         const User = (await import('../models/user.model.js')).default;
+         // Notify all managers (or specific team managers if strict)
+         // For simplicity, notifying all Managers for now or those in same team logic can be added
+         // Let's notify Admins and Managers
+         const managers = await User.find({ role: { $in: ['Manager', 'Admin'] } });
+         
+         const Notification = (await import('../models/notification.model.js')).default;
+         const notifications = managers.map(m => ({
+             recipient: m._id,
+             message: `Technician ${req.user.name} updated request "${request.subject}" to ${req.body.status}`,
+             type: 'Update',
+             relatedRequest: request._id
+         }));
+         
+         if (notifications.length > 0) {
+             await Notification.insertMany(notifications);
+         }
+    }
 
     res.json(updatedRequest);
 };

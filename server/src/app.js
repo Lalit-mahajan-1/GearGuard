@@ -43,6 +43,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/equipment', equipmentRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/requests', requestRoutes);
+import notificationRoutes from './routes/notification.routes.js';
+app.use('/api/notifications', notificationRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
